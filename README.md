@@ -33,6 +33,15 @@ Integration with Slack App to capture and handle Slack events.
 - Go to **OAuth & Permissions**, click **Reinstall to Workspace**
 - Remember to **Add this Slack App to Channels you would like to monitor**
 
+## Customize Handling of Slack Events
+
+- Under `lambda_msg_handler/slack_msg_handler.py`
+  - Add additional logic or functions
+  - Update function `handler()`
+  - \*`tag_relevant_user()` is a sample for reference
+  - Slack event format documentation is [here](https://api.slack.com/events/)
+- Redeploy via TF to take effect
+
 ## Key Components
 
 - Slack App (create on Slack)
