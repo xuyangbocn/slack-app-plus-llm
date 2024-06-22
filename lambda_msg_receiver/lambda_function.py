@@ -100,7 +100,7 @@ def lambda_handler(event, context):
     team_id, event_ts, channel, user = get_event_key_attrs(body)
 
     # Send message to SQS
-    if body['event']['app_id'] in slack_app_ids:
+    if body['event'].get('app_id') in slack_app_ids:
         # Ignore bot message sent by self
         logger.info('Ignore bot message sent by self')
     else:

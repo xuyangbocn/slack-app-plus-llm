@@ -49,7 +49,7 @@ def compose_at_user_msg(user_ids):
     slack message formatting to mention/tag/@ user
     '''
     mentions = " ".join([f"<@{u}>" for u in user_ids])
-    text = f'To alert: {mentions}'
+    text = f'Hi {mentions}, please check out this alert.'
     return text
 
 
