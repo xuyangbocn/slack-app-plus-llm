@@ -1,0 +1,7 @@
+*.DS_Store
+.terraform*
+terraform.tfstate*
+*auto.tfvars
+.vscode
+*.python-version
+files/*
