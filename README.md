@@ -2,6 +2,8 @@
 
 Integration with Slack App to capture and handle Slack events.
 
+<img src="docs/demo1.gif" alt="drawing" width="400"/>
+
 ## How to Setup and Use
 
 ### 1. Create a Slack App
@@ -68,6 +70,9 @@ Integration with Slack App to capture and handle Slack events.
   - Process logic to handle Slack events from SQS
     - Ex. Extract User emails in slack message, find the Slack user, and send a reply message to @user
   - Handling logic should be customized based on needs
+
+### Illustration
+<img src="docs/architecture.png" alt="drawing" width="400"/>
 
 ## Further Enhancements
 
