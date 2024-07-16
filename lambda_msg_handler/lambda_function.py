@@ -2,11 +2,15 @@ import os
 import json
 import logging
 import boto3
+from slack_sdk import WebClient
 
 from slack_msg_handler import handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+slack_oauth_token = os.environ["slack_oauth_token"]
+slack = WebClient(token=slack_oauth_token)
 
 sqs = boto3.client('sqs')
 sqs_url = sqs.get_queue_url(
@@ -26,7 +30,7 @@ def lambda_handler(event, context):
         logger.debug(json.dumps(body, indent=2))
 
         # Message handling
-        handler(body)
+        handler(body, slack_client=slack)
 
         # Delete message from SQS
         logger.info("Delete from sqs")
