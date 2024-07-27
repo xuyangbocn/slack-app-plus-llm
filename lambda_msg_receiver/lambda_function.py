@@ -38,16 +38,10 @@ def push_to_sqs(json_slack_event, team_id, event_ts, channel="", user=""):
     Raise:
         If fail to push, exception is raised by boto3
     '''
-    logger.debug('Get SQS url')
-    sqs = boto3.client('sqs')
-    sqs_url = sqs.get_queue_url(
-        QueueName=os.environ['sqs_name'],
-        QueueOwnerAWSAccountId=os.environ['sqs_owner_account'],
-    )['QueueUrl']
-
     logger.info('Push to SQS')
+    sqs = boto3.client('sqs')
     resp = sqs.send_message(
-        QueueUrl=sqs_url,
+        QueueUrl=os.environ['sqs_url'],
         MessageBody=json_slack_event,
         MessageAttributes={
             'team_id': {
