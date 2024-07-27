@@ -1,12 +1,9 @@
-import json
-import re
-import os
 import logging
+import json
 
 from slack_sdk.errors import SlackApiError
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 def extract_event_details(slack_event):
@@ -16,20 +13,21 @@ def extract_event_details(slack_event):
     https://api.slack.com/events/message.groups
     '''
 
-    text, channel_id, thread_ts = "", "", ""
+    text, channel_id, event_ts, thread_ts = "", "", "", ""
     try:
         msg = slack_event['event']
         text = msg['text']
         channel_id = msg['channel']
-        thread_ts = msg['event_ts']
+        event_ts = msg['event_ts']
+        thread_ts = msg.get('thread_ts', event_ts)
         logger.info(json.dumps(msg, indent=2))
     except KeyError as e:
         logger.warning("Malformed slack event format")
 
-    return dict(text=text, channel_id=channel_id, thread_ts=thread_ts)
+    return dict(text=text, channel_id=channel_id, event_ts=event_ts, thread_ts=thread_ts)
 
 
-def slack_get_user_id(email, slack_client):
+def get_user_id(email, slack_client):
     # Slack SDK Doc: https://slack.dev/python-slack-sdk/api-docs/slack_sdk/
     # https://api.slack.com/methods/users.lookupByEmail
     try:
@@ -40,7 +38,7 @@ def slack_get_user_id(email, slack_client):
     return resp['user']['id']
 
 
-def slack_reply(text, channel_id, thread_ts, slack_client):
+def reply(text, channel_id, thread_ts, slack_client):
     # Slack SDK Doc: https://slack.dev/python-slack-sdk/api-docs/slack_sdk/
     # https://api.slack.com/methods/chat.postMessage
     try:
@@ -52,33 +50,5 @@ def slack_reply(text, channel_id, thread_ts, slack_client):
         logger.info(resp)
     except SlackApiError as e:
         logger.error(f"Error: {e}")
-
-    return
-
-
-def handler(slack_event, slack_client):
-    '''
-    Overall slack message processing function
-    Mention at relevant users
-    '''
-    # Get relevant info from Slack event
-    msg_details = extract_event_details(slack_event)
-
-    # Extract relevant user email
-    emails = re.findall(
-        r"(?P<emails>[\w\.-]+@[\w\.-]+\.[\w]+)", msg_details['text'])
-    logger.info(f"Found: {emails}")
-
-    # Find user id
-    user_ids = [user_id for e in set(emails) if (
-        user_id := slack_get_user_id(e, slack_client)) != None]
-
-    # @user
-    if user_ids:
-        reply = 'Hi {mentions}, please check out this alert.'.format(
-            metions=" ".join([f"<@{u}>" for u in user_ids])
-        )
-        slack_reply(reply, msg_details['channel_id'],
-                    msg_details['thread_ts'], slack_client)
 
     return

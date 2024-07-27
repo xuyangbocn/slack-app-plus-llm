@@ -6,7 +6,7 @@ import os
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-from slack_msg_handler import handler
+from msg_handlers.tag_user_handler import handler as tag_user_handler
 
 # SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 # slack = WebClient(token=SLACK_BOT_TOKEN)
@@ -62,4 +62,4 @@ test_slack_event = '''{
 '''
 
 if __name__ == "__main__":
-    handler(json.loads(test_slack_event))
+    tag_user_handler(json.loads(test_slack_event))
