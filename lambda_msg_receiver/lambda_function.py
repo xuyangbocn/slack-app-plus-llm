@@ -71,6 +71,7 @@ def lambda_handler(event, context):
     # Get lambda event body which contains slack event
     logger.debug(json.dumps(event, indent=2))
     json_body = event.get('body', '{}')
+    headers = event.get('headers', {})
     body = json.loads(json_body)
     logger.debug(json.dumps(body, indent=2))
 
@@ -97,6 +98,9 @@ def lambda_handler(event, context):
     if body['event'].get('app_id') in slack_app_ids:
         # Ignore bot message sent by self
         logger.info('Ignore bot message sent by self')
+    elif headers.get('x-slack-retry-reason', None) == "http_timeout":
+        # Ignore retry from slack event api due to 3sec timeout
+        logger.info('Ignore retry msg due to slack event api 3sec timeout')
     else:
         push_to_sqs(json_body, team_id, event_ts, channel, user)
 
