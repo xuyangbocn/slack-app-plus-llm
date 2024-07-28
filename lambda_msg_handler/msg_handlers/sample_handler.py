@@ -19,7 +19,7 @@ def handler(slack_event, slack_client):
     msg_details = extract_event_details(slack_event)
 
     # echo received message
-    response = f'I heard you saying: `{msg_details['text'][:100]}`'
+    response = f"I heard you saying: `{msg_details['text'][:100]}`"
     reply(response, msg_details['channel_id'],
           msg_details['event_ts'], slack_client)
 
