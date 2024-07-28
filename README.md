@@ -9,31 +9,37 @@ Integration with Slack App to capture and handle Slack events.
 ### 1. Create a Slack App
 
 - Go to your Slack workspace, follow Step1 in [Slack Quick Start](https://api.slack.com/quickstart#creating)
-- Go to Your App **>> Setting >> Basic Information >> App Credential**, note down `App ID`, `Verification Token`
-- Go to **OAuth & Permissions >> Scopes >> Bot Token Scopes**
-  - Add `chat:write` for posting message, `users:read` and `users:read.email` for search Slack users
-  - [Ref: Slack Scope List for Bot Token](https://api.slack.com/scopes?filter=granular_bot)
-  - \*You may add/remove based on whether and what lambda event handler logic performs
+- Go to **Your Apps >> Setting >> Basic Information >> App Credential**, note down `App ID`, `Verification Token`
+- Go to **OAuth & Permissions >> Scopes >> Bot Token Scopes**, add/remove based on what lambda event handler logic performs, E.g.
+  - `channels:history`, `groups:history`, `im:history`: to view messages and content where this App is added in
+  - `chat:write`: to post message
+  - `users:read`, `users:read.email`: to search Slack users
+  - [Refer: Slack Scope List for Bot Token](https://api.slack.com/scopes?filter=granular_bot)
+- Go to **App Home >> Show Tabs >> messages tab**, toggle on and tick Allow users to send Slash commands and messages from the messages tab.
 - Go to **OAuth & Permissions**, click **Install to Workspace**
 - Note down `Bot User OAuth Token` under OAuth Tokens for Your Workspace
 
 ### 2. Setup infra on AWS using TF
 
 - Configure TF vars for `slack_app`, e.g. `{"app_a_id" : "app_a_verification_token"}`
-  - [Ref: How to set TF vars using environment vars](https://developer.hashicorp.com/terraform/cli/config/environment-variables#tf_var_name)
+  - [Refer: How to set TF vars using environment vars](https://developer.hashicorp.com/terraform/cli/config/environment-variables#tf_var_name)
 - Configure other TF vars as needed
 - Run `terraform init`, `plan` and `apply`
-- Obtain the lambda function url from TF output `msg_receiver_lambda_function_url`
+- Note down TF output `msg_receiver_lambda_function_url`
 
 ### 3. Configure Slack App
 
-- Go to Slack App created earlier
-- Go to **Event Subscriptions >> Enable Events**, toggle on & input `msg_receiver_lambda_function_url` into Request URL
-- Go to **Subscribe to Bot Event >> Add Bot User Event**, add event types you would like to receive and handle.
-  - e.g. `message.group`, `message.channel` to receive new messages posted in public/private channels
-  - [Ref: Slack event list](https://api.slack.com/events?filter=Events)
+- Go to the created Slack App >>  **Event Subscriptions >> Enable Events**, toggle on & input `msg_receiver_lambda_function_url` into Request URL
+- Go to **Subscribe to Bot Event >> Add Bot User Event**, add event types you would like to receive and handle. E.g.
+  - `message.group`: to receive private channels messages
+  - `message.channel`: to receive public channels messages
+  - `message.im`: to receive direct message
+  - [Refer: Slack event list](https://api.slack.com/events?filter=Events)
 - Go to **OAuth & Permissions**, click **Reinstall to Workspace**
-- Remember to **Add this Slack App to Channels you would like to monitor**
+
+### 4. Interact with Slack App
+- _EITHER_ Add this Slack App to Channels you would like to monitor
+- _OR_ message this Slack App directly
 
 ## Customize Handling of Slack Events
 
