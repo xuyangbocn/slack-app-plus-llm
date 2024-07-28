@@ -38,16 +38,10 @@ def push_to_sqs(json_slack_event, team_id, event_ts, channel="", user=""):
     Raise:
         If fail to push, exception is raised by boto3
     '''
-    logger.debug('Get SQS url')
-    sqs = boto3.client('sqs')
-    sqs_url = sqs.get_queue_url(
-        QueueName=os.environ['sqs_name'],
-        QueueOwnerAWSAccountId=os.environ['sqs_owner_account'],
-    )['QueueUrl']
-
     logger.info('Push to SQS')
+    sqs = boto3.client('sqs')
     resp = sqs.send_message(
-        QueueUrl=sqs_url,
+        QueueUrl=os.environ['sqs_url'],
         MessageBody=json_slack_event,
         MessageAttributes={
             'team_id': {
@@ -77,6 +71,7 @@ def lambda_handler(event, context):
     # Get lambda event body which contains slack event
     logger.debug(json.dumps(event, indent=2))
     json_body = event.get('body', '{}')
+    headers = event.get('headers', {})
     body = json.loads(json_body)
     logger.debug(json.dumps(body, indent=2))
 
@@ -103,6 +98,9 @@ def lambda_handler(event, context):
     if body['event'].get('app_id') in slack_app_ids:
         # Ignore bot message sent by self
         logger.info('Ignore bot message sent by self')
+    elif headers.get('x-slack-retry-reason', None) == "http_timeout":
+        # Ignore retry from slack event api due to 3sec timeout
+        logger.info('Ignore retry msg due to slack event api 3sec timeout')
     else:
         push_to_sqs(json_body, team_id, event_ts, channel, user)
 
