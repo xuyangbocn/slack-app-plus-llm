@@ -8,6 +8,7 @@ from slack_sdk.errors import SlackApiError
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def handler(slack_event, slack_client):
