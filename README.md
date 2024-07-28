@@ -37,10 +37,9 @@ Integration with Slack App to capture and handle Slack events.
 
 ## Customize Handling of Slack Events
 
-- Under `lambda_msg_handler/slack_msg_handler.py`
-  - Add additional logic or functions
-  - Update function `handler()`
-  - \*`tag_relevant_user()` is a sample for reference
+- Under `lambda_msg_handler/msg_handlers/`
+  - Add additional logic e.g. `xxx_handler.py`
+  - Update `lambda_function.py`. Refer to `sample_handler()` as an example
   - Slack event format documentation is [here](https://api.slack.com/events/)
 - Redeploy via TF to take effect
 
@@ -68,10 +67,12 @@ Integration with Slack App to capture and handle Slack events.
 - Lambda Event Handler (Setup on AWS)
 
   - Process logic to handle Slack events from SQS
-    - Ex. Extract User emails in slack message, find the Slack user, and send a reply message to @user
+    - Ex1. `sample_handler`: echo the message received
+    - Ex2. `tag_user_handler`: Extract User emails in slack message, find the Slack user, and send a reply message to @user
   - Handling logic should be customized based on needs
 
 ### Illustration
+
 <img src="docs/architecture.png" alt="drawing" width="400"/>
 
 ## Further Enhancements
