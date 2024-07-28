@@ -54,3 +54,9 @@ variable "openai_gpt_model" {
   type        = string
   default     = "gpt-4o"
 }
+
+variable "openai_asst_instructions" {
+  description = "Instructions for OpenAI assistant."
+  type        = string
+  default     = ""
+}

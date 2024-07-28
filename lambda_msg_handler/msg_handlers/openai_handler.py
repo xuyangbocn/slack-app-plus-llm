@@ -1,13 +1,15 @@
 import os
 import logging
+import json
 
-from openai import OpenAI
+from openai import OpenAI, AssistantEventHandler
+
 import boto3
 import botocore
 
 from slack_sdk.errors import SlackApiError
-from msg_handlers.openai_related.utils import get_asst, EventHandler
-from msg_handlers.openai_related.function_call import functions
+from msg_handlers.openai_related.utils import get_asst, ask_asst
+from msg_handlers.openai_related.asst_tools import tools
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
@@ -16,13 +18,16 @@ logger.setLevel(logging.INFO)
 # gpt model
 openai_gpt_model = os.environ.get("openai_gpt_model", "gpt-4o")
 openai_api_key = os.environ.get("openai_api_key", "")
+openai_asst_instructions = os.environ.get("openai_asst_instructions", "")
 openai_client = OpenAI(
     api_key=openai_api_key
 )
 
-# function call available
-available_functions = functions['declaration']
-tools = functions['description']
+# tools available for assistant to use
+tool_defs = tools['definitions']
+
+# tool function declaration
+tool_functions = tools['tool_functions']
 
 # aws boto3
 ddb_client = boto3.client("dynamodb")
@@ -83,38 +88,19 @@ def handler(slack_event, slack_client):
         openai_client,
         name="chatgpt_on_slack",
         description="Chatgpt on slack",
-        instructions=os.getenv('chatgpt_instruction', ""),
+        instructions=openai_asst_instructions,
         model=openai_gpt_model,
-        tools=tools  # to be enhanced
+        tools=tool_defs
     )
 
     # Get exsiting / Create new thread
     asst_thread_id = get_asst_thread_id(
         msg_details['channel_id'], msg_details['thread_ts'])
 
-    # Call OpenAi
-    response = ""
-    openai_client.beta.threads.messages.create(
-        thread_id=asst_thread_id,
-        role="user",
-        content=msg_details['text']
-    )
-    with openai_client.beta.threads.runs.stream(
-        thread_id=asst_thread_id,
-        assistant_id=asst.id,
-        event_handler=EventHandler(
-            openai_client,
-            functions=available_functions,  # to be enhanced
-            extra_function_call_args={}  # to be enhanced
-        ),
-    ) as stream:
-        for event in stream:
-            logger.info(f"Stream event: {event.event}")
-            if event.event == "thread.message.delta" and event.data.delta.content:
-                response += event.data.delta.content[0].text.value
-            # if event.event == 'thread.run.requires_action':
-            #     # When tool_call=function needed, run status will turn 'requires_action'
-            #     event_handler.handle_requires_action(event.data)
+    # Call OpenAI Assistant
+    response = ask_asst(
+        openai_client, asst.id, asst_thread_id, msg_details['text'],
+        tool_functions)
 
     # respond on slack thread
     logger.info(f"Send response to slack thread")
