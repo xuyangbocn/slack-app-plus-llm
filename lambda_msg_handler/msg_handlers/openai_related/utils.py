@@ -64,6 +64,44 @@ def ask_asst(
     Return:
         response (str): string response from openai
     '''
+    def handle_require_actions(
+            openai_client, tool_functions, current_thread_id, current_run_id, tool_calls):
+
+        # requires tool calls
+        tool_outputs = []
+        for tool in tool_calls:
+            resp = tool_functions[tool.function.name](
+                **json.loads(tool.function.arguments)
+            )
+            logger.info(f'func name: {tool.function.name}')
+            logger.info(f'func arg: {tool.function.arguments}')
+            logger.info(f'func resp: {resp[:500]}')
+            tool_outputs.append({
+                "tool_call_id": tool.id, "output": resp})
+
+        # submit tool call output
+        response = ""
+        with openai_client.beta.threads.runs.submit_tool_outputs_stream(
+            thread_id=current_thread_id,
+            run_id=current_run_id,
+            tool_outputs=tool_outputs,
+            event_handler=AssistantEventHandler(),
+        ) as tool_stream:
+            for tool_event in tool_stream:
+                logger.info(f"Tool stream event: {tool_event.event}")
+                if tool_event.event == "thread.message.delta" and tool_event.data.delta.content:
+                    response += tool_event.data.delta.content[0].text.value
+                elif tool_event.event == 'thread.run.requires_action':
+                    response = handle_require_actions(
+                        openai_client,
+                        tool_functions,
+                        current_thread_id,
+                        current_run_id,
+                        tool_event.data.required_action.submit_tool_outputs.tool_calls
+                    )
+
+        return response
+
     openai_client.beta.threads.messages.create(
         thread_id=asst_thread_id,
         role="user",
@@ -83,28 +121,13 @@ def ask_asst(
                 # ordinary response from openai
                 response += event.data.delta.content[0].text.value
             elif event.event == 'thread.run.requires_action':
-                # tool call needed
-                tool_outputs = []
-                for tool in event.data.required_action.submit_tool_outputs.tool_calls:
-                    resp = tool_functions[tool.function.name](
-                        **json.loads(tool.function.arguments)
-                    )
-                    logger.info(f'func name: {tool.function.name}')
-                    logger.info(f'func arg: {tool.function.arguments}')
-                    logger.info(f'func resp: {resp[:500]}')
-                    tool_outputs.append({
-                        "tool_call_id": tool.id, "output": resp})
-
-                # submit tool call output
-                with openai_client.beta.threads.runs.submit_tool_outputs_stream(
-                    thread_id=main_event_handler.current_run.thread_id,
-                    run_id=main_event_handler.current_run.id,
-                    tool_outputs=tool_outputs,
-                    event_handler=AssistantEventHandler(),
-                ) as tool_stream:
-                    for tool_event in tool_stream:
-                        logger.info(f"Tool stream event: {tool_event.event}")
-                        if tool_event.event == "thread.message.delta" and tool_event.data.delta.content:
-                            response += tool_event.data.delta.content[0].text.value
+                # requires tool calls
+                response = handle_require_actions(
+                    openai_client,
+                    tool_functions,
+                    main_event_handler.current_run.thread_id,
+                    main_event_handler.current_run.id,
+                    event.data.required_action.submit_tool_outputs.tool_calls
+                )
 
     return response
