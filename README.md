@@ -1,6 +1,6 @@
 # Slack Event Handler
 
-Integration with Slack App to capture and handle Slack events.
+Integration with Slack App to capture and handle Slack events. [_(Demo on YouTube)_](https://youtu.be/O8yVftgHnVE)
 
 <img src="docs/demo1.gif" alt="drawing" width="400"/>
 
@@ -29,7 +29,7 @@ Integration with Slack App to capture and handle Slack events.
 
 ### 3. Configure Slack App
 
-- Go to the created Slack App >>  **Event Subscriptions >> Enable Events**, toggle on & input `msg_receiver_lambda_function_url` into Request URL
+- Go to the created Slack App >> **Event Subscriptions >> Enable Events**, toggle on & input `msg_receiver_lambda_function_url` into Request URL
 - Go to **Subscribe to Bot Event >> Add Bot User Event**, add event types you would like to receive and handle. E.g.
   - `message.group`: to receive private channels messages
   - `message.channel`: to receive public channels messages
@@ -38,6 +38,7 @@ Integration with Slack App to capture and handle Slack events.
 - Go to **OAuth & Permissions**, click **Reinstall to Workspace**
 
 ### 4. Interact with Slack App
+
 - _EITHER_ Add this Slack App to Channels you would like to monitor
 - _OR_ message this Slack App directly
 
@@ -83,6 +84,7 @@ Integration with Slack App to capture and handle Slack events.
 
 ## Further Enhancements
 
+- Replace deprecating Slack verification token with signning secret
 - Further protection for lambda function url
 - Explore alternative setup to expose lambda
 - Further simplify initial setup, esp. slack end.
