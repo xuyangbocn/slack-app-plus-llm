@@ -42,3 +42,21 @@ variable "slack_oauth_token" {
   type        = string
   default     = ""
 }
+
+variable "openai_api_key" {
+  description = "OpenAI API key that allows handler to use openai service."
+  type        = string
+  default     = ""
+}
+
+variable "openai_gpt_model" {
+  description = "OpenAI model that allows openai handler to use."
+  type        = string
+  default     = "gpt-4o"
+}
+
+variable "openai_asst_instructions" {
+  description = "Instructions for OpenAI assistant."
+  type        = string
+  default     = ""
+}

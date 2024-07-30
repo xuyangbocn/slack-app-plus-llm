@@ -22,8 +22,8 @@ def get_event_key_attrs(slack_event):
     logger.info(f'Getting Slack key attr')
     team_id = slack_event['team_id']
     event_ts = slack_event['event']['event_ts']
-    channel = slack_event['event'].get('channel', '')
-    user = slack_event['event'].get('user', '')
+    channel = slack_event['event'].get('channel', 'NotFoundInEvent')
+    user = slack_event['event'].get('user', 'NotFoundInEvent')
     ret = (team_id, event_ts, channel, user)
 
     logger.info(f'{ret}')

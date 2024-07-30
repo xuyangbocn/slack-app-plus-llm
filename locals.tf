@@ -14,9 +14,10 @@ locals {
   }
 
   msg_handler = {
-    iam_role       = "iamr-${var.msg_handler_name}"
-    lambda         = "lmbd-${var.msg_handler_name}"
-    lambda_mem     = var.lambda_msg_handler_mem
-    lambda_timeout = var.lambda_msg_handler_timeout
+    iam_role        = "iamr-${var.msg_handler_name}"
+    lambda          = "lmbd-${var.msg_handler_name}"
+    lambda_mem      = var.lambda_msg_handler_mem
+    lambda_timeout  = var.lambda_msg_handler_timeout
+    ddb_asst_thread = "ddb-asst-thread"
   }
 }
