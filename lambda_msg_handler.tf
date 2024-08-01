@@ -115,8 +115,7 @@ resource "aws_lambda_function" "msg_handler" {
 
   environment {
     variables = {
-      sqs_name                    = local.msg_receiver.sqs
-      sqs_owner_account           = local.account_id
+      sqs_url                     = aws_sqs_queue.msg_receiver.url
       slack_oauth_token           = local.slack_oauth_token
       ddb_asst_thread             = local.msg_handler.ddb_asst_thread
       openai_api_key              = var.openai_handler_vars.api_key

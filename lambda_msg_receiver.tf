@@ -66,11 +66,9 @@ resource "aws_lambda_function" "msg_receiver" {
 
   environment {
     variables = {
-      sqs_name          = local.msg_receiver.sqs
-      sqs_owner_account = local.account_id
-      sqs_url           = aws_sqs_queue.msg_receiver.url
-      slack_app_tokens  = join(",", local.slack_app_tokens)
-      slack_app_ids     = join(",", local.slack_app_ids)
+      sqs_url          = aws_sqs_queue.msg_receiver.url
+      slack_app_tokens = join(",", local.slack_app_tokens)
+      slack_app_ids    = join(",", local.slack_app_ids)
     }
   }
 }
