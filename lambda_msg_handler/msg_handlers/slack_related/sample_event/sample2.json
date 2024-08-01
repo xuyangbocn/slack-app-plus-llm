@@ -1,0 +1,90 @@
+{
+  "token": "rGJUwcs4Vn8bKqCUHMzmw8tW",
+  "team_id": "T03QFN12345",
+  "context_team_id": "T03QFN12345",
+  "context_enterprise_id": null,
+  "api_app_id": "A079NG12345",
+  "event": {
+    "type": "message",
+    "subtype": "message_changed",
+    "message": {
+      "user": "U03QFQ12345",
+      "type": "message",
+      "edited": {
+        "user": "U03QFQ12345",
+        "ts": "1722271050.000000"
+      },
+      "client_msg_id": "3f28ae72-0cfe-4bb6-af6d-5720bb290563",
+      "text": "how about trump and biden and xi?",
+      "team": "T03QFN12345",
+      "thread_ts": "1722270889.865429",
+      "parent_user_id": "U03QFQ12345",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "TkUAG",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "how about trump and biden and xi?"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "ts": "1722270958.248869",
+      "source_team": "T03QFN12345",
+      "user_team": "T03QFN12345"
+    },
+    "previous_message": {
+      "user": "U03QFQ12345",
+      "type": "message",
+      "ts": "1722270958.248869",
+      "client_msg_id": "3f28ae72-0cfe-4bb6-af6d-5720bb290563",
+      "text": "how about trump and biden?",
+      "team": "T03QFN12345",
+      "thread_ts": "1722270889.865429",
+      "parent_user_id": "U03QFQ12345",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "skGUJ",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "how about trump and biden?"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "channel": "D079CG12345",
+    "hidden": true,
+    "ts": "1722271050.002200",
+    "event_ts": "1722271050.002200",
+    "channel_type": "im"
+  },
+  "type": "event_callback",
+  "event_id": "Ev07F7EL9BME",
+  "event_time": 1722271050,
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "team_id": "T03QFN12345",
+      "user_id": "U0799U12345",
+      "is_bot": true,
+      "is_enterprise_install": false
+    }
+  ],
+  "is_ext_shared_channel": false,
+  "event_context": "4-eyJldCI6Im1lc3NhZ2UiLCJ0aWQiOiJUMDNRRk5VUTlKUCIsImFpZCI6IkEwNzlOR1VMOENSIiwiY2lkIjoiRDA3OUNHQzRLTkcifQ"
+}
