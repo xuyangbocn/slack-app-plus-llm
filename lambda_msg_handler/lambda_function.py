@@ -6,6 +6,7 @@ from slack_sdk import WebClient
 
 # from msg_handlers.sample_handler import handler as sample_handler
 # from msg_handlers.tag_user_handler import handler as tag_user_handler
+# from msg_handlers.az_openai_handler import handler as az_openai_handler
 from msg_handlers.openai_handler import handler as openai_handler
 
 logger = logging.getLogger(__name__)
