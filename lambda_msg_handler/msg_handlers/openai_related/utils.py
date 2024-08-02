@@ -147,10 +147,13 @@ def complete_chat(
         tools=tool_defs,
     )
     response_message = response.choices[0].message
-    messages.append({"role": response_message.role,
-                     "content": response_message.content})
 
     while response_message.tool_calls:
+        messages.append({
+            "role": response_message.role,
+            "tool_calls": response_message.tool_calls,
+            "content": response_message.content})
+
         for tool_call in response_message.tool_calls:
             logger.info("==func name: " + tool_call.function.name)
             function_name = tool_call.function.name

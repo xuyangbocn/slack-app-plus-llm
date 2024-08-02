@@ -92,7 +92,8 @@ def fetch_slack_thread(slack_channel_id, slack_thread_ts):
             KeyConditionExpression='slack_channel_id_thread_ts = :slack_channel_id_thread_ts',
             ExpressionAttributeValues={
                 ':slack_channel_id_thread_ts': {
-                    'S': f'{slack_channel_id};{slack_thread_ts}'}
+                    'S': f'{slack_channel_id};{slack_thread_ts}',
+                }
             }
         )
         logger.info(
@@ -104,7 +105,7 @@ def fetch_slack_thread(slack_channel_id, slack_thread_ts):
             for i in resp.get('Items')[::-1]
         ]
     except (botocore.exceptions.ClientError, KeyError) as exNotFound:
-        logger.info(f'No existing threads')
+        logger.info(f'No existing threads: {exNotFound}')
         messages = []
         pass
 
@@ -120,16 +121,19 @@ def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, co
         ddb_client.update_item(
             TableName=ddb_chat_completion_table,
             Key=ddb_search_key,
-            UpdateExpression='SET role=:role, content=:content',
+            UpdateExpression='SET #r=:role, content=:content',
             ExpressionAttributeValues={
                 ':role': {'S': role},
                 ':content': {'S': content},
+            },
+            ExpressionAttributeNames={
+                "#r": "role"
             }
         )
         logger.info(
             f'DDB record created for {role}: {slack_channel_id};{slack_thread_ts}')
     except botocore.exceptions.ClientError as ex:
-        logger.warning(ex)
+        logger.error(f'DDB record fail to create: {ex}')
         pass
     return
 
@@ -191,6 +195,8 @@ def chat_completion_handler(slack_event, slack_client):
                      msg_details['event_ts'], 'user', msg_details['text'])
 
     # pass whole message history to chat completion
+    logger.info(f'Call chat completion api')
+    logger.info(f'{"\n".join([str(t)[:70] for t in thread_messages])}')
     response = complete_chat(
         az_openai_client,
         model=az_openai_deployment_name,

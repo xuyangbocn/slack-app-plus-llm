@@ -39,11 +39,12 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
     actions = [
       "dynamodb:DescribeTable",
       "dynamodb:GetItem",
-      "dynamodb:UpdateItem"
+      "dynamodb:UpdateItem",
+      "dynamodb:Query",
     ]
     resources = [
       aws_dynamodb_table.asst_thread.arn,
-      aws_aws_dynamodb_table.chat_completion.arn
+      aws_dynamodb_table.chat_completion.arn
     ]
   }
 }
