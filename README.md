@@ -1,6 +1,7 @@
 # Slack Event Handler
 
 Integration with Slack App to capture and handle Slack events. [_(Demo on YouTube)_](https://youtu.be/O8yVftgHnVE)
+Out-of-box handlers for OpenAI & Azure OpenAI (with support of function call, assistant api, and chat completion api)
 
 <img src="docs/demo1.gif" alt="drawing" width="400"/>
 
@@ -11,6 +12,7 @@ Integration with Slack App to capture and handle Slack events. [_(Demo on YouTub
 - Go to your Slack workspace, follow Step1 in [Slack Quick Start](https://api.slack.com/quickstart#creating)
 - Go to **Your Apps >> Setting >> Basic Information >> App Credential**, note down `App ID`, `Verification Token`
 - Go to **OAuth & Permissions >> Scopes >> Bot Token Scopes**, add/remove based on what lambda event handler logic performs, E.g.
+  - `app_mention:read`: to view messages that mention tag this slack app
   - `channels:history`, `groups:history`, `im:history`: to view messages and content where this App is added in
   - `chat:write`: to post message
   - `users:read`, `users:read.email`: to search Slack users
@@ -31,6 +33,7 @@ Integration with Slack App to capture and handle Slack events. [_(Demo on YouTub
 
 - Go to the created Slack App >> **Event Subscriptions >> Enable Events**, toggle on & input `msg_receiver_lambda_function_url` into Request URL
 - Go to **Subscribe to Bot Event >> Add Bot User Event**, add event types you would like to receive and handle. E.g.
+  - `app_mention`: to receive messages that mention the app
   - `message.group`: to receive private channels messages
   - `message.channel`: to receive public channels messages
   - `message.im`: to receive direct message
@@ -41,6 +44,7 @@ Integration with Slack App to capture and handle Slack events. [_(Demo on YouTub
 
 - _EITHER_ Add this Slack App to Channels you would like to monitor
 - _OR_ message this Slack App directly
+- (Usage also depends on this Slack App's Event Subscription and Permission setup)
 
 ## Customize Handling of Slack Events
 
@@ -77,6 +81,16 @@ Integration with Slack App to capture and handle Slack events. [_(Demo on YouTub
     - Ex1. `sample_handler`: echo the message received
     - Ex2. `tag_user_handler`: Extract User emails in slack message, find the Slack user, and send a reply message to @user
   - Handling logic should be customized based on needs
+
+- DynamoDB for mapping of Slack thread and OpenAI Assistant thread (Setup on AWS)
+
+  - Store the OpenAI assistant thread id for each Slack thread
+  - Only needed for OpenAI Assistant API handler
+
+- DynamoDB to keep thread history (Setup on AWS)
+
+  - As chat completion API requires full message history for each API call, the DDB keeps the messages in each thread
+  - Only for OpenAI Chat Completion API handler
 
 ### Illustration
 
