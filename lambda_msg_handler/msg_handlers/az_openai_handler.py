@@ -80,9 +80,10 @@ def get_asst_thread_id(slack_channel_id, slack_thread_ts):
     return asst_thread_id
 
 
-def fetch_slack_thread_history(slack_channel_id, slack_thread_ts):
-    messages = []
-    # search messages in the thread
+def fetch_slack_thread(slack_channel_id, slack_thread_ts):
+    '''
+    Fetch all messages in the thread stored in DDB
+    '''
     try:
         resp = ddb_client.query(
             TableName=ddb_chat_completion_table,
@@ -96,12 +97,15 @@ def fetch_slack_thread_history(slack_channel_id, slack_thread_ts):
         )
         logger.info(
             f'DDB records {resp.get("count", "not")} found: {slack_channel_id};{slack_thread_ts}')
+
+        # reverse descending order to chronological ascending order
         messages = [
             {'role': i['role']['S'], 'content': i['content']['S']}
-            for i in resp.get('Items')
+            for i in resp.get('Items')[::-1]
         ]
     except (botocore.exceptions.ClientError, KeyError) as exNotFound:
         logger.info(f'No existing threads')
+        messages = []
         pass
 
     return messages
@@ -123,7 +127,7 @@ def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, co
             }
         )
         logger.info(
-            f'DDB record created: {slack_channel_id};{slack_thread_ts}')
+            f'DDB record created for {role}: {slack_channel_id};{slack_thread_ts}')
     except botocore.exceptions.ClientError as ex:
         logger.warning(ex)
         pass
@@ -174,9 +178,12 @@ def chat_completion_handler(slack_event, slack_client):
     msg_details = extract_event_details(slack_event)
 
     # Re-collect past message in the thread
-    thread_messages = fetch_slack_thread_history(
-        msg_details['channel_id'], msg_details['thread_ts']) + [
-            {'role': 'user', 'content': msg_details['text']}
+    thread_messages = [
+        {'role': 'system', 'content': az_openai_asst_instructions}
+    ] + fetch_slack_thread(
+        msg_details['channel_id'], msg_details['thread_ts']
+    ) + [
+        {'role': 'user', 'content': msg_details['text']}
     ]
 
     # save latest thread msg
@@ -194,9 +201,9 @@ def chat_completion_handler(slack_event, slack_client):
     # respond on slack thread
     logger.info(f'Send response to slack thread')
     resp = reply(response, msg_details['channel_id'],
-                 msg_details['event_ts'], slack_client)
+                 msg_details['thread_ts'], slack_client)
 
     # save latest response
     save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],
-                     msg_details['event_ts'], 'assistant', msg_details['text'])
+                     resp['ts'], 'assistant', response)
     return
