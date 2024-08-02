@@ -135,3 +135,46 @@ def ask_asst(
                 )
 
     return response
+
+
+def complete_chat(
+        openai_client,
+        model: str,
+        messages: List[Dict[str, str]],
+        tool_defs: List[dict],
+        tool_functions: Dict[str, Callable]) -> str:
+
+    response = openai_client.chat.completions.create(
+        model=model,
+        messages=messages,
+        tools=tool_defs,
+    )
+    response_message = response.choices[0].message
+    messages.append({"role": response_message.role,
+                     "content": response_message.content})
+
+    while response_message.tool_calls:
+        for tool_call in response_message.tool_calls:
+            logger.info("==func name: " + tool_call.function.name)
+            function_name = tool_call.function.name
+            function_to_call = tool_functions[function_name]
+            function_args = json.loads(tool_call.function.arguments)
+            logger.info("==func args: \n" + str(function_args))
+            function_response = function_to_call(**function_args)
+            logger.info("==func resp: \n" + str(function_response[:200]))
+            messages.append(
+                {
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": function_name,
+                    "content": function_response,
+                }
+            )
+        response = openai_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=tool_defs,
+        )
+        response_message = response.choices[0].message
+
+    return response_message.content

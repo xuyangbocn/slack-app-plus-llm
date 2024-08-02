@@ -34,7 +34,7 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
   }
 
   statement {
-    sid    = "AllowReadWriteAsstThreadDDB"
+    sid    = "AllowReadWriteAsstThreadAndChatCompletionDDB"
     effect = "Allow"
     actions = [
       "dynamodb:DescribeTable",
@@ -42,7 +42,8 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
       "dynamodb:UpdateItem"
     ]
     resources = [
-      aws_dynamodb_table.asst_thread.arn
+      aws_dynamodb_table.asst_thread.arn,
+      aws_aws_dynamodb_table.chat_completion.arn
     ]
   }
 }
@@ -118,6 +119,7 @@ resource "aws_lambda_function" "msg_handler" {
       sqs_url                     = aws_sqs_queue.msg_receiver.url
       slack_oauth_token           = local.slack_oauth_token
       ddb_asst_thread             = local.msg_handler.ddb_asst_thread
+      ddb_chat_completion         = local.msg_handler.ddb_chat_completion
       openai_api_key              = var.openai_handler_vars.api_key
       openai_gpt_model            = var.openai_handler_vars.model
       openai_asst_instructions    = var.openai_handler_vars.asst_instructions
