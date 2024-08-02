@@ -38,15 +38,12 @@ def get_asst(
         asst = openai_client.beta.assistants.retrieve(asst_id)
     else:
         logger.info(f'Searching: {name}')
-        try:
-            assts = openai_client.beta.assistants.list(limit=100)
-            for a in assts:
-                if a.name == name:
-                    asst = a
-                    logger.info(f"Found: {asst.name}")
-                    break
-        except Exception as error:
-            logger.warning(f'Not able to list asst: {str(error)}')
+        assts = openai_client.beta.assistants.list(limit=100)
+        for a in assts:
+            if a.name == name:
+                asst = a
+                logger.info(f"Found: {asst.name}")
+                break
 
     if not asst:
         logger.info(f"Creating: {name}")
