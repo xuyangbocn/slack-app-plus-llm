@@ -9,7 +9,7 @@ import botocore
 
 from slack_sdk.errors import SlackApiError
 from msg_handlers.openai_related.utils import get_asst, ask_asst, complete_chat
-from msg_handlers.openai_related.asst_tools import tools
+from msg_handlers.asst_tools import tools
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
