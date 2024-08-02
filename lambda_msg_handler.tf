@@ -34,15 +34,17 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
   }
 
   statement {
-    sid    = "AllowReadWriteAsstThreadDDB"
+    sid    = "AllowReadWriteAsstThreadAndChatCompletionDDB"
     effect = "Allow"
     actions = [
       "dynamodb:DescribeTable",
       "dynamodb:GetItem",
-      "dynamodb:UpdateItem"
+      "dynamodb:UpdateItem",
+      "dynamodb:Query",
     ]
     resources = [
-      aws_dynamodb_table.asst_thread.arn
+      aws_dynamodb_table.asst_thread.arn,
+      aws_dynamodb_table.chat_completion.arn
     ]
   }
 }
@@ -115,13 +117,18 @@ resource "aws_lambda_function" "msg_handler" {
 
   environment {
     variables = {
-      sqs_name                 = local.msg_receiver.sqs
-      sqs_owner_account        = local.account_id
-      slack_oauth_token        = local.slack_oauth_token
-      ddb_asst_thread          = local.msg_handler.ddb_asst_thread
-      openai_api_key           = var.openai_api_key
-      openai_gpt_model         = var.openai_gpt_model
-      openai_asst_instructions = var.openai_asst_instructions
+      sqs_url                     = aws_sqs_queue.msg_receiver.url
+      slack_oauth_token           = local.slack_oauth_token
+      ddb_asst_thread             = local.msg_handler.ddb_asst_thread
+      ddb_chat_completion         = local.msg_handler.ddb_chat_completion
+      openai_api_key              = var.openai_handler_vars.api_key
+      openai_gpt_model            = var.openai_handler_vars.model
+      openai_asst_instructions    = var.openai_handler_vars.asst_instructions
+      az_openai_endpoint          = var.az_openai_handler_vars.endpoint
+      az_openai_api_key           = var.az_openai_handler_vars.api_key
+      az_openai_api_version       = var.az_openai_handler_vars.api_version
+      az_openai_deployment_name   = var.az_openai_handler_vars.deployment_name
+      az_openai_asst_instructions = var.az_openai_handler_vars.asst_instructions
     }
   }
 }

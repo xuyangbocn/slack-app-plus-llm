@@ -43,20 +43,34 @@ variable "slack_oauth_token" {
   default     = ""
 }
 
-variable "openai_api_key" {
-  description = "OpenAI API key that allows handler to use openai service."
-  type        = string
-  default     = ""
+variable "openai_handler_vars" {
+  description = "Variables for Azure OpenAI Handler."
+  type = object({
+    api_key           = string
+    model             = string
+    asst_instructions = string
+  })
+  default = {
+    api_key           = "",
+    model             = "",
+    asst_instructions = "",
+  }
 }
 
-variable "openai_gpt_model" {
-  description = "OpenAI model that allows openai handler to use."
-  type        = string
-  default     = "gpt-4o"
-}
-
-variable "openai_asst_instructions" {
-  description = "Instructions for OpenAI assistant."
-  type        = string
-  default     = ""
+variable "az_openai_handler_vars" {
+  description = "Variables for Azure OpenAI Handler."
+  type = object({
+    endpoint          = string
+    api_key           = string
+    api_version       = string
+    deployment_name   = string
+    asst_instructions = string
+  })
+  default = {
+    endpoint          = "",
+    api_key           = "",
+    api_version       = "",
+    deployment_name   = "",
+    asst_instructions = "",
+  }
 }

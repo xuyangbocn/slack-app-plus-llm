@@ -13,18 +13,19 @@ def extract_event_details(slack_event):
     https://api.slack.com/events/message.groups
     '''
 
-    text, channel_id, event_ts, thread_ts = "", "", "", ""
+    text, channel_id, event_ts, thread_ts, user = "", "", "", "", ""
     try:
         msg = slack_event['event']
         text = msg['text']
         channel_id = msg['channel']
         event_ts = msg['event_ts']
         thread_ts = msg.get('thread_ts', event_ts)
+        user = msg.get('user', 'unknown')
         logger.info(json.dumps(msg, indent=2))
     except KeyError as e:
         logger.warning("Malformed slack event format")
 
-    return dict(text=text, channel_id=channel_id, event_ts=event_ts, thread_ts=thread_ts)
+    return dict(text=text, channel_id=channel_id, event_ts=event_ts, thread_ts=thread_ts, user=user)
 
 
 def get_user_id(email, slack_client):
@@ -50,5 +51,6 @@ def reply(text, channel_id, thread_ts, slack_client):
         logger.info(resp)
     except SlackApiError as e:
         logger.error(f"Error: {e}")
+        resp = None
 
-    return
+    return resp

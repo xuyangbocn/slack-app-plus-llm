@@ -1,16 +1,16 @@
 {
   "token": "SsivLSHwVZ0YX1BghqJNFCDw",
-  "team_id": "TCH9UHD61",
-  "context_team_id": "TCH9UHD61",
+  "team_id": "TCH12345",
+  "context_team_id": "TCH12345",
   "context_enterprise_id": null,
-  "api_app_id": "A06V5GNDGCE",
+  "api_app_id": "A06V512345",
   "event": {
-    "user": "U02NHEM6VHA",
+    "user": "U02NHE12345",
     "type": "message",
     "ts": "1718961204.606759",
     "client_msg_id": "735777ef-21f9-4a87-9882-a4a7b4e3e5e7",
-    "text": "<mailto:xu_yangbo@tech.gov.sg|xu_yangbo@tech.gov.sg>; <mailto:xu_yangbo@gmail.com|xu_yangbo@gmail.com>",
-    "team": "TCH9UHD61",
+    "text": "<mailto:xuyangbocn@icloud.com|xuyangbocn@icloud.com>; <mailto:xu_yangbo@gmail.com|xu_yangbo@gmail.com>",
+    "team": "TCH12345",
     "blocks": [
       {
         "type": "rich_text",
@@ -21,8 +21,8 @@
             "elements": [
               {
                 "type": "link",
-                "url": "mailto:xu_yangbo@tech.gov.sg",
-                "text": "xu_yangbo@tech.gov.sg",
+                "url": "mailto:xuyangbocn@icloud.com",
+                "text": "xuyangbocn@icloud.com",
                 "unsafe": true
               }
             ]
@@ -30,7 +30,7 @@
         ]
       }
     ],
-    "channel": "C078QG853F1",
+    "channel": "C078QG12345",
     "event_ts": "1718961204.606759",
     "channel_type": "channel"
   },
@@ -40,8 +40,8 @@
   "authorizations": [
     {
       "enterprise_id": null,
-      "team_id": "TCH9UHD61",
-      "user_id": "U06UXKBULKH",
+      "team_id": "TCHsds12345",
+      "user_id": "U06UXK12345",
       "is_bot": true,
       "is_enterprise_install": false
     }
