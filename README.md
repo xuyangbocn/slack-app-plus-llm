@@ -1,7 +1,7 @@
-# Slack Event Handler
+# Slack App Plus LLM
 
 Integration with Slack App to capture and handle Slack events. [_(Demo on YouTube)_](https://youtu.be/O8yVftgHnVE)
-Out-of-box handlers for OpenAI & Azure OpenAI (with support of function call, assistant api, and chat completion api)
+Included Out-of-box integration for OpenAI & Azure OpenAI (with support of function call, assistant api, and chat completion api)
 
 <img src="docs/demo1.gif" alt="drawing" width="400"/>
 
