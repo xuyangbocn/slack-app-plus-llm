@@ -32,7 +32,7 @@ def lambda_handler(event, context):
 
         # Message handling
         try:
-            openai_handler(body, slack_client=slack)
+            handler(body, slack_client=slack)
         except Exception as error:
             logger.error(f"Error at event handling: {str(error)}")
             # TBD another queue to capture failed message
