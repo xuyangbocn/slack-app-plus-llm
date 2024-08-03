@@ -74,3 +74,9 @@ variable "az_openai_handler_vars" {
     asst_instructions = "",
   }
 }
+
+variable "llm_tools_vars" {
+  description = "Variables required in llm_tools in message handler lambda. Each var passed in as string only."
+  type        = map(string)
+  default     = {}
+}
