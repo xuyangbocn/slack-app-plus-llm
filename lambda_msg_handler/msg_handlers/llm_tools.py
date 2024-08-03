@@ -1,8 +1,14 @@
 import logging
+import os
+import json
 from datetime import datetime, timezone
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+llm_tools_vars = json.loads(
+    os.environ.get('llm_tools_vars', '{}')
+)
 
 
 def find_birthday(**args) -> str:
@@ -29,8 +35,8 @@ tools = {
                     "properties": {
                         "name": {
                             "type": "string",
-                            "description": "Name of the person."
-                        }
+                            "description": "Name of the person.",
+                        },
                     },
                     "required": ["name"],
                 },

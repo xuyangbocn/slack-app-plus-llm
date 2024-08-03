@@ -3,7 +3,7 @@ import logging
 from typing import Optional, Union, Any, Dict, List, Callable
 from typing_extensions import override
 
-from openai import AssistantEventHandler
+from openai import OpenAI, AzureOpenAI, AssistantEventHandler
 from openai.types.beta.threads.runs import ToolCall, ToolCallDelta, RunStep
 
 logger = logging.getLogger()
@@ -139,12 +139,19 @@ def complete_chat(
         model: str,
         messages: List[Dict[str, str]],
         tool_defs: List[dict],
-        tool_functions: Dict[str, Callable]) -> str:
+        tool_functions: Dict[str, Callable],
+        az_data_source: dict) -> str:
+
+    if (type(openai_client) is not AzureOpenAI) or az_data_source == {}:
+        extra_body = {}
+    else:
+        extra_body = {"data_sources": [az_data_source]}
 
     response = openai_client.chat.completions.create(
         model=model,
         messages=messages,
         tools=tool_defs,
+        extra_body=extra_body,
     )
     response_message = response.choices[0].message
 
@@ -177,4 +184,7 @@ def complete_chat(
         )
         response_message = response.choices[0].message
 
+    if not response_message.content:
+        logger.warning(f'Empty text content from OpenAI response: {response}')
+        return f'Empty text content from OpenAI response: {response}'
     return response_message.content

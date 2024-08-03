@@ -4,10 +4,10 @@ import logging
 import boto3
 from slack_sdk import WebClient
 
-# from msg_handlers.sample_handler import handler as sample_handler
-# from msg_handlers.tag_user_handler import handler as tag_user_handler
-# from msg_handlers.az_openai_handler import handler as az_openai_handler
-from msg_handlers.openai_handler import handler as openai_handler
+# from msg_handlers.sample_handler import handler
+# from msg_handlers.tag_user_handler import handler
+# from msg_handlers.az_openai_handler import handler_via_chat_completion as handler
+from msg_handlers.openai_handler import handler_via_assistant as handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -32,7 +32,7 @@ def lambda_handler(event, context):
 
         # Message handling
         try:
-            openai_handler(body, slack_client=slack)
+            handler(body, slack_client=slack)
         except Exception as error:
             logger.error(f"Error at event handling: {str(error)}")
             # TBD another queue to capture failed message
