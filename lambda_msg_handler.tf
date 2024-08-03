@@ -47,6 +47,15 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
       aws_dynamodb_table.chat_completion.arn
     ]
   }
+
+  statement {
+    sid    = "AllowAssumeCrossAccountRole"
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole"
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role" "msg_handler" {
