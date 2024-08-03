@@ -23,7 +23,7 @@ az_openai_deployment_name = os.environ.get('az_openai_deployment_name', '')
 az_openai_asst_instructions = os.environ.get('az_openai_asst_instructions', '')
 az_openai_client = AzureOpenAI(
     api_key=az_openai_api_key,
-    api_version=az_openai_api_key,
+    api_version=az_openai_api_version,
     azure_endpoint=az_openai_endpoint,
 )
 
