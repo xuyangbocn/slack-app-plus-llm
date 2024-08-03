@@ -138,6 +138,7 @@ resource "aws_lambda_function" "msg_handler" {
       az_openai_api_version       = var.az_openai_handler_vars.api_version
       az_openai_deployment_name   = var.az_openai_handler_vars.deployment_name
       az_openai_asst_instructions = var.az_openai_handler_vars.asst_instructions
+      az_data_source              = jsonencode(var.az_openai_handler_vars.az_data_source)
       llm_tools_vars              = jsonencode(var.llm_tools_vars)
     }
   }

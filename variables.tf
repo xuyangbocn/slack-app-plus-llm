@@ -65,6 +65,10 @@ variable "az_openai_handler_vars" {
     api_version       = string
     deployment_name   = string
     asst_instructions = string
+
+    # If need Azure AI Search to supplement Azure OpenAI
+    # https://learn.microsoft.com/en-us/azure/ai-services/openai/use-your-data-quickstart
+    az_data_source = any
   })
   default = {
     endpoint          = "",
@@ -72,6 +76,7 @@ variable "az_openai_handler_vars" {
     api_version       = "",
     deployment_name   = "",
     asst_instructions = "",
+    az_data_source    = {}
   }
 }
 
