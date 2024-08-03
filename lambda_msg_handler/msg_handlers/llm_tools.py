@@ -35,8 +35,8 @@ tools = {
                     "properties": {
                         "name": {
                             "type": "string",
-                            "description": "Name of the person."
-                        }
+                            "description": "Name of the person.",
+                        },
                     },
                     "required": ["name"],
                 },
