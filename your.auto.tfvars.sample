@@ -1,0 +1,15 @@
+slack_app         = { "A0791234567" : "rGJU12345612345671234567" }
+slack_oauth_token = "xoxb-1234567890123-1234567890123-abcd12345678901234567890"
+openai_handler_vars = {
+  api_key           = "sk-abcd12345678901234567890abcd12345678901234567890"
+  model             = "gpt-4o"
+  asst_instructions = ""
+}
+az_openai_handler_vars = {
+  endpoint          = "https://xxxxxx.openai.azure.com/"
+  api_key           = "xxxxxxx",
+  api_version       = "2024-05-15-preview",
+  deployment_name   = "Gvt4o",
+  asst_instructions = ""
+  az_data_source    = {}
+}
