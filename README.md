@@ -1,31 +1,29 @@
 # Slack App Plus LLM
 
-Integration with Slack App to capture and handle Slack events. [_(Demo on YouTube)_](https://youtu.be/O8yVftgHnVE)
-Included Out-of-box integration for OpenAI & Azure OpenAI (with support of function call, assistant api, and chat completion api)
+- Build a Slack App to capture and handle Slack events. [Video Part 1](https://youtu.be/O8yVftgHnVE)
+- Integration with OpenAI & Azure OpenAI with support of function call, Assistant API, and Chat Completion API. [Video Part 2](https://youtu.be/lzL_F4F-tDE)
 
-<img src="docs/demo1.gif" alt="drawing" width="400"/>
+<img src="docs/architecture2.png" alt="drawing" width="600"/>
 
 ## How to Setup and Use
 
 ### 1. Create a Slack App
 
-- Go to your Slack workspace, follow Step1 in [Slack Quick Start](https://api.slack.com/quickstart#creating)
+- Go to your Slack workspace to create an App from scratch
+  - [Refer: Step1 in Slack Quick Start](https://api.slack.com/quickstart#creating)
 - Go to **Your Apps >> Setting >> Basic Information >> App Credential**, note down `App ID`, `Verification Token`
-- Go to **OAuth & Permissions >> Scopes >> Bot Token Scopes**, add/remove based on what lambda event handler logic performs, E.g.
-  - `app_mention:read`: to view messages that mention tag this slack app
-  - `channels:history`, `groups:history`, `im:history`: to view messages and content where this App is added in
-  - `chat:write`: to post message
-  - `users:read`, `users:read.email`: to search Slack users
-  - [Refer: Slack Scope List for Bot Token](https://api.slack.com/scopes?filter=granular_bot)
+- Go to **OAuth & Permissions**
+  - Under **Scopes >> Bot Token Scopes**, add/remove based on what lambda event handler logic performs, E.g.
+    - `app_mention:read`, `channels:history`, `groups:history`, `im:history`, `chat:write`
+    - [Refer: Slack Scope List for Bot Token](https://api.slack.com/scopes?filter=granular_bot)
+  - Click **Install to Workspace** and note down `Bot User OAuth Token`
 - Go to **App Home >> Show Tabs >> messages tab**, toggle on and tick Allow users to send Slash commands and messages from the messages tab.
-- Go to **OAuth & Permissions**, click **Install to Workspace**
-- Note down `Bot User OAuth Token` under OAuth Tokens for Your Workspace
 
 ### 2. Setup infra on AWS using TF
 
-- Configure TF vars for `slack_app`, e.g. `{"app_a_id" : "app_a_verification_token"}`
+- Configure various TF vars as needed
+  - Refer to [your.auto.tfvars.sample](./your.auto.tfvars.sample)
   - [Refer: How to set TF vars using environment vars](https://developer.hashicorp.com/terraform/cli/config/environment-variables#tf_var_name)
-- Configure other TF vars as needed
 - Run `terraform init`, `plan` and `apply`
 - Note down TF output `msg_receiver_lambda_function_url`
 
@@ -33,11 +31,8 @@ Included Out-of-box integration for OpenAI & Azure OpenAI (with support of funct
 
 - Go to the created Slack App >> **Event Subscriptions >> Enable Events**, toggle on & input `msg_receiver_lambda_function_url` into Request URL
 - Go to **Subscribe to Bot Event >> Add Bot User Event**, add event types you would like to receive and handle. E.g.
-  - `app_mention`: to receive messages that mention the app
-  - `message.group`: to receive private channels messages
-  - `message.channel`: to receive public channels messages
-  - `message.im`: to receive direct message
-  - [Refer: Slack event list](https://api.slack.com/events?filter=Events)
+  - `app_mention`, `message.group`, `message.channel`, `message.im`
+  - [Refer: Slack Event List](https://api.slack.com/events?filter=Events)
 - Go to **OAuth & Permissions**, click **Reinstall to Workspace**
 
 ### 4. Interact with Slack App
@@ -48,11 +43,14 @@ Included Out-of-box integration for OpenAI & Azure OpenAI (with support of funct
 
 ## Customize Handling of Slack Events
 
-- Under `lambda_msg_handler/msg_handlers/`
-  - Add additional logic e.g. `xxx_handler.py`
-  - Update `lambda_function.py`. Refer to `sample_handler()` as an example
-  - Slack event format documentation is [here](https://api.slack.com/events/)
-- Redeploy via TF to take effect
+- Refer to [sample_handler()](./lambda_msg_handler/msg_handlers/sample_handler.py) as an example
+  - Create additional handler logic e.g. `xxx_handler.py`
+  - Update `lambda_function.py`
+
+## Customize LLM Function Call
+
+- You may implement more function call in `openai_handler.py` or `az_openai_handler.py`
+- Refer to [llm_tools.py](./lambda_msg_handler/msg_handlers/llm_tools.py) as an example
 
 ## Key Components
 
@@ -99,6 +97,5 @@ Included Out-of-box integration for OpenAI & Azure OpenAI (with support of funct
 ## Further Enhancements
 
 - Replace deprecating Slack verification token with signning secret
-- Further protection for lambda function url
-- Explore alternative setup to expose lambda
-- Further simplify initial setup, esp. slack end.
+- Further protection for lambda function url and alternative setup to expose lambda
+- Add handler for LLM self hosted on Ollama
