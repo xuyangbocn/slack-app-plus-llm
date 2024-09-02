@@ -26,7 +26,6 @@ def log_func_call(f):
             'tool_args': args,
             'tool_response': r,
         }
-        logger.info(f'tool_call_audit: {log}')
         response = logs.put_log_events(
             logGroupName=cwlg_tool_call_audit,
             logStreamName=cwls_func_call_audit,
@@ -37,8 +36,6 @@ def log_func_call(f):
                 },
             ]
         )
-        logger.info(f'tool_call_audit: {response}')
-
         return r
 
     return with_log
