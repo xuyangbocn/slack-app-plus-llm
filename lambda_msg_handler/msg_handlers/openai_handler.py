@@ -158,7 +158,7 @@ def handler_via_assistant(slack_event, slack_client):
 
     # Call OpenAI Assistant
     response = ask_asst(
-        openai_client, asst.id, asst_thread_id, msg_details['text'],
+        openai_client, asst.id, asst_thread_id, msg_details['user'], msg_details['text'],
         tool_functions)
 
     # respond on slack thread
@@ -196,6 +196,7 @@ def handler_via_chat_completion(slack_event, slack_client):
     response = complete_chat(
         openai_client,
         model=openai_gpt_model,
+        user=msg_details['user'],
         messages=thread_messages,
         tool_defs=tool_defs,
         tool_functions=tool_functions)

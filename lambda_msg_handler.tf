@@ -9,7 +9,8 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
       "logs:PutLogEvents"
     ]
     resources = [
-      "arn:aws:logs:*:${local.account_id}:*"
+      "arn:aws:logs:*:${local.account_id}:*",
+      "${aws_cloudwatch_log_group.tool_call_audit.arn}:*",
     ]
   }
 
@@ -130,6 +131,8 @@ resource "aws_lambda_function" "msg_handler" {
       slack_oauth_token           = local.slack_oauth_token
       ddb_asst_thread             = local.msg_handler.ddb_asst_thread
       ddb_chat_completion         = local.msg_handler.ddb_chat_completion
+      cwlg_tool_call_audit        = local.msg_handler.cwlg_tool_call_audit
+      cwls_func_call_audit        = local.msg_handler.cwls_func_call_audit
       openai_api_key              = var.openai_handler_vars.api_key
       openai_gpt_model            = var.openai_handler_vars.model
       openai_asst_instructions    = var.openai_handler_vars.asst_instructions

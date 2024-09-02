@@ -57,6 +57,7 @@ def ask_asst(
         openai_client,
         asst_id: str,
         asst_thread_id: str,
+        user: str,
         msg: str,
         tool_functions: Dict[str, Callable]) -> str:
     '''
@@ -66,12 +67,13 @@ def ask_asst(
         response (str): string response from openai
     '''
     def handle_require_actions(
-            openai_client, tool_functions, current_thread_id, current_run_id, tool_calls):
+            openai_client, tool_functions, caller, current_thread_id, current_run_id, tool_calls):
 
         # requires tool calls
         tool_outputs = []
         for tool in tool_calls:
             resp = tool_functions[tool.function.name](
+                caller=caller,
                 **json.loads(tool.function.arguments)
             )
             logger.info(f'func name: {tool.function.name}')
@@ -96,6 +98,7 @@ def ask_asst(
                     response = handle_require_actions(
                         openai_client,
                         tool_functions,
+                        caller,
                         current_thread_id,
                         current_run_id,
                         tool_event.data.required_action.submit_tool_outputs.tool_calls
@@ -126,6 +129,7 @@ def ask_asst(
                 response = handle_require_actions(
                     openai_client,
                     tool_functions,
+                    user,
                     main_event_handler.current_run.thread_id,
                     main_event_handler.current_run.id,
                     event.data.required_action.submit_tool_outputs.tool_calls
@@ -137,6 +141,7 @@ def ask_asst(
 def complete_chat(
         openai_client,
         model: str,
+        user: str,
         messages: List[Dict[str, str]],
         tool_defs: List[dict],
         tool_functions: Dict[str, Callable],
@@ -167,7 +172,9 @@ def complete_chat(
             function_to_call = tool_functions[function_name]
             function_args = json.loads(tool_call.function.arguments)
             logger.info("==func args: \n" + str(function_args))
-            function_response = function_to_call(**function_args)
+            function_response = function_to_call(
+                caller=user,
+                **function_args)
             logger.info("==func resp: \n" + str(function_response[:200]))
             messages.append(
                 {

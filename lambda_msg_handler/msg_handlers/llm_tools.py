@@ -3,6 +3,8 @@ import os
 import json
 from datetime import datetime, timezone
 
+from msg_handlers.openai_related.tool_call_audit import log_func_call
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -11,6 +13,7 @@ llm_tools_vars = json.loads(
 )
 
 
+@log_func_call
 def find_birthday(**args) -> str:
     name = args['name']
     bd = "unknown"
@@ -19,6 +22,7 @@ def find_birthday(**args) -> str:
     return bd
 
 
+@log_func_call
 def current_datetime(**args) -> str:
     return datetime.now(timezone.utc).isoformat()
 
