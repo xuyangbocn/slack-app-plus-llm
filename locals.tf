@@ -20,11 +20,13 @@ locals {
   }
 
   msg_handler = {
-    iam_role            = "iamr-${var.msg_handler_name}-${random_string.x.id}"
-    lambda              = "lmbd-${var.msg_handler_name}-${random_string.x.id}"
-    lambda_mem          = var.lambda_msg_handler_mem
-    lambda_timeout      = var.lambda_msg_handler_timeout
-    ddb_asst_thread     = "ddb-asst-thread-${random_string.x.id}"
-    ddb_chat_completion = "ddb-chat-completion-${random_string.x.id}"
+    iam_role             = "iamr-${var.msg_handler_name}-${random_string.x.id}"
+    lambda               = "lmbd-${var.msg_handler_name}-${random_string.x.id}"
+    lambda_mem           = var.lambda_msg_handler_mem
+    lambda_timeout       = var.lambda_msg_handler_timeout
+    ddb_asst_thread      = "ddb-asst-thread-${random_string.x.id}"
+    ddb_chat_completion  = "ddb-chat-completion-${random_string.x.id}"
+    cwlg_tool_call_audit = "cwlg-tool-call-audit-${random_string.x.id}"
+    cwls_func_call_audit = "function_calls"
   }
 }
