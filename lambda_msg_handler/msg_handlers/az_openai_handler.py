@@ -6,14 +6,20 @@ from openai import AzureOpenAI, AssistantEventHandler
 
 import boto3
 import botocore
-
+from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+
 from msg_handlers.llm_tools import tools
 from msg_handlers.openai_related.utils import get_asst, ask_asst, complete_chat
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+# Slack client
+slack_oauth_token = os.environ["slack_oauth_token"]
+slack = WebClient(token=slack_oauth_token)
 
 # azure openai
 az_openai_endpoint = os.environ.get('az_openai_endpoint', '')
@@ -139,7 +145,7 @@ def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, co
     return
 
 
-def handler_via_assistant(slack_event, slack_client):
+def handler_via_assistant(slack_event):
     '''
     Overall slack message processing function
     Simple pass-on to Az OpenAI Assistant
@@ -169,12 +175,12 @@ def handler_via_assistant(slack_event, slack_client):
     # respond on slack thread
     logger.info(f'Send response to slack thread')
     reply(response, msg_details['channel_id'],
-          msg_details['event_ts'], slack_client)
+          msg_details['event_ts'], slack)
 
     return
 
 
-def handler_via_chat_completion(slack_event, slack_client):
+def handler_via_chat_completion(slack_event):
     '''
     Overall slack message processing function
     Re-collect thread history and call Az OpenAI chat completion
@@ -211,7 +217,7 @@ def handler_via_chat_completion(slack_event, slack_client):
     # respond on slack thread
     logger.info(f'Send response to slack thread')
     resp = reply(response, msg_details['channel_id'],
-                 msg_details['thread_ts'], slack_client)
+                 msg_details['thread_ts'], slack)
 
     # save latest response
     save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],

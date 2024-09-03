@@ -99,7 +99,7 @@ resource "aws_lambda_layer_version" "openai_sdk" {
   compatible_runtimes = ["python3.9", "python3.10", "python3.11", "python3.12"]
 
   filename         = data.archive_file.openai_sdk.output_path
-  source_code_hash = data.archive_file.msg_handler.output_base64sha256
+  source_code_hash = data.archive_file.openai_sdk.output_base64sha256
 }
 
 # Lambda source code

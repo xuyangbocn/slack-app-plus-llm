@@ -3,6 +3,7 @@ import re
 import os
 import logging
 
+from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from msg_handlers.slack_related.utils import extract_event_details, get_user_id, reply
@@ -10,8 +11,12 @@ from msg_handlers.slack_related.utils import extract_event_details, get_user_id,
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# Slack client
+slack_oauth_token = os.environ["slack_oauth_token"]
+slack = WebClient(token=slack_oauth_token)
 
-def handler(slack_event, slack_client):
+
+def handler(slack_event):
     '''
     Overall slack message processing function
     Tag at relevant users
@@ -26,7 +31,7 @@ def handler(slack_event, slack_client):
 
     # Find user id
     user_ids = [user_id for e in set(emails) if (
-        user_id := get_user_id(e, slack_client)) != None]
+        user_id := get_user_id(e, slack)) != None]
 
     # @user
     if user_ids:
@@ -34,6 +39,6 @@ def handler(slack_event, slack_client):
             metions=" ".join([f"<@{u}>" for u in user_ids])
         )
         reply(reply_msg, msg_details['channel_id'],
-              msg_details['event_ts'], slack_client)
+              msg_details['event_ts'], slack)
 
     return

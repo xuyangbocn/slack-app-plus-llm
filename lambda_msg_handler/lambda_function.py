@@ -2,7 +2,6 @@ import os
 import json
 import logging
 import boto3
-from slack_sdk import WebClient
 
 # from msg_handlers.sample_handler import handler
 # from msg_handlers.tag_user_handler import handler
@@ -11,10 +10,6 @@ from msg_handlers.openai_handler import handler_via_assistant as handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-# Slack client
-slack_oauth_token = os.environ["slack_oauth_token"]
-slack = WebClient(token=slack_oauth_token)
 
 sqs = boto3.client('sqs')
 sqs_url = os.environ['sqs_url']
@@ -32,7 +27,7 @@ def lambda_handler(event, context):
 
         # Message handling
         try:
-            handler(body, slack_client=slack)
+            handler(body)
         except Exception as error:
             logger.error(f"Error at event handling: {str(error)}")
             # TBD another queue to capture failed message

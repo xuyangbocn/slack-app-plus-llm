@@ -1,13 +1,8 @@
 import logging
-import json
-import time
-import uuid
+
 import boto3
-import botocore
-from boto3.dynamodb.types import TypeDeserializer
 
 sts_client = boto3.client('sts')
-d = TypeDeserializer()
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
