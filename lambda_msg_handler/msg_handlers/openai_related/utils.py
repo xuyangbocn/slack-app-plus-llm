@@ -1,5 +1,6 @@
 import json
 import logging
+import concurrent.futures as cf
 from typing import Optional, Union, Any, Dict, List, Callable
 from typing_extensions import override
 
@@ -71,16 +72,30 @@ def ask_asst(
 
         # requires tool calls
         tool_outputs = []
-        for tool in tool_calls:
-            resp = tool_functions[tool.function.name](
-                caller=caller,
-                **json.loads(tool.function.arguments)
-            )
-            logger.info(f'func name: {tool.function.name}')
-            logger.info(f'func arg: {tool.function.arguments}')
-            logger.info(f'func resp: {resp[:500]}')
-            tool_outputs.append({
-                "tool_call_id": tool.id, "output": resp})
+        with cf.ThreadPoolExecutor() as pool:
+            fs = {
+                pool.submit(
+                    tool_functions[tool_call.function.name],
+                    caller=user,
+                    **json.loads(tool_call.function.arguments)
+                ): {
+                    'tool_call_id': tool_call.id,
+                    'function_name': tool_call.function.name,
+                    'function_args': json.loads(tool_call.function.arguments)
+                }
+                for tool_call in tool_calls
+            }
+            for f in cf.as_completed(fs):
+                logger.info(f'tool call func name: {fs[f]['function_name']}')
+                logger.info(f'tool call func args: \n{fs[f]['function_args']}')
+                resp = f.result()
+                logger.info(f'tool call func resp: \n{resp[:200]}')
+                tool_outputs.append(
+                    {
+                        "tool_call_id": fs[f]['tool_call_id'],
+                        "output": resp,
+                    }
+                )
 
         # submit tool call output
         response = ""
@@ -166,24 +181,33 @@ def complete_chat(
             "tool_calls": response_message.tool_calls,
             "content": response_message.content})
 
-        for tool_call in response_message.tool_calls:
-            logger.info("==func name: " + tool_call.function.name)
-            function_name = tool_call.function.name
-            function_to_call = tool_functions[function_name]
-            function_args = json.loads(tool_call.function.arguments)
-            logger.info("==func args: \n" + str(function_args))
-            function_response = function_to_call(
-                caller=user,
-                **function_args)
-            logger.info("==func resp: \n" + str(function_response[:200]))
-            messages.append(
-                {
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "name": function_name,
-                    "content": function_response,
+        with cf.ThreadPoolExecutor() as pool:
+            fs = {
+                pool.submit(
+                    tool_functions[tool_call.function.name],
+                    caller=user,
+                    **json.loads(tool_call.function.arguments)
+                ): {
+                    'tool_call_id': tool_call.id,
+                    'function_name': tool_call.function.name,
+                    'function_args': json.loads(tool_call.function.arguments)
                 }
-            )
+                for tool_call in response_message.tool_calls
+            }
+            for f in cf.as_completed(fs):
+                logger.info(f'tool call func name: {fs[f]['function_name']}')
+                logger.info(f'tool call func args: \n{fs[f]['function_args']}')
+                resp = f.result()
+                logger.info(f'tool call func resp: \n{resp[:200]}')
+                messages.append(
+                    {
+                        "tool_call_id": fs[f]['tool_call_id'],
+                        "role": "tool",
+                        "name": fs[f]['function_name'],
+                        "content": resp,
+                    }
+                )
+
         response = openai_client.chat.completions.create(
             model=model,
             messages=messages,
