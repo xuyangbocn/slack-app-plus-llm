@@ -10,7 +10,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from msg_handlers.llm_tools import tools
-from msg_handlers.openai_related.utils import get_asst, ask_asst, complete_chat
+from msg_handlers.llm_utils.agent import Agent
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
@@ -39,6 +39,18 @@ tool_defs = tools['definitions']
 
 # tool function declaration
 tool_functions = tools['tool_functions']
+
+# Initialize an LLM Agent
+agent = Agent(
+    az_openai_client,
+    name='az_openai_on_slack',
+    description='Azure OpenAI on slack',
+    model=az_openai_deployment_name,
+    sentences=[az_openai_asst_instructions],
+    tools=tool_defs,
+    tool_functions=tool_functions,
+    az_data_source=az_data_source,
+)
 
 # aws boto3
 ddb_client = boto3.client('dynamodb')
@@ -153,24 +165,16 @@ def handler_via_assistant(slack_event):
     # Get relevant info from Slack event
     msg_details = extract_event_details(slack_event)
 
-    # Get Az OpenAI assistant
-    asst = get_asst(
-        az_openai_client,
-        name='az_openai_on_slack',
-        description='Azure OpenAI on slack',
-        instructions=az_openai_asst_instructions,
-        model=az_openai_deployment_name,
-        tools=tool_defs
-    )
-
     # Get exsiting / Create new thread
     asst_thread_id = get_asst_thread_id(
         msg_details['channel_id'], msg_details['thread_ts'])
 
     # Call OpenAI Assistant
-    response = ask_asst(
-        az_openai_client, asst.id, asst_thread_id, msg_details['user'], msg_details['text'],
-        tool_functions)
+    response = agent.ask_assistant(
+        user=msg_details['user'],
+        asst_thread_id=asst_thread_id,
+        message=msg_details['text'],
+    )
 
     # respond on slack thread
     logger.info(f'Send response to slack thread')
@@ -189,9 +193,7 @@ def handler_via_chat_completion(slack_event):
     msg_details = extract_event_details(slack_event)
 
     # Re-collect past message in the thread
-    thread_messages = [
-        {'role': 'system', 'content': az_openai_asst_instructions}
-    ] + fetch_slack_thread(
+    thread_messages = fetch_slack_thread(
         msg_details['channel_id'], msg_details['thread_ts']
     ) + [
         {'role': 'user', 'content': msg_details['text']}
@@ -204,14 +206,9 @@ def handler_via_chat_completion(slack_event):
     # pass whole message history to chat completion
     logger.info(f'Call chat completion api')
     logger.info(f'{"\n".join([str(t)[:70] for t in thread_messages])}')
-    response = complete_chat(
-        az_openai_client,
-        model=az_openai_deployment_name,
+    response = agent.chat_completion(
         user=msg_details['user'],
         messages=thread_messages,
-        tool_defs=tool_defs,
-        tool_functions=tool_functions,
-        az_data_source=az_data_source,
     )
 
     # respond on slack thread

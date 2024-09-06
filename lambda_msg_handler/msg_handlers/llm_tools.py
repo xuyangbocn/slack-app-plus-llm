@@ -3,7 +3,7 @@ import os
 import json
 from datetime import datetime, timezone
 
-from msg_handlers.openai_related.tool_call_audit import log_func_call
+from msg_handlers.llm_utils.tool_call_audit import log_func_call
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
