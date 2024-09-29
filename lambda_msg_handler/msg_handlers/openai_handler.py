@@ -51,7 +51,7 @@ ddb_asst_thread_table = os.environ['ddb_asst_thread']
 ddb_chat_completion_table = os.environ['ddb_chat_completion']
 
 
-def get_asst_thread_id(slack_channel_id, slack_thread_ts):
+def get_asst_thread_id(slack_channel_id, slack_thread_ts, slack_user_id=''):
     '''
     DDB ddb_asst_thread keeps the mapping from slack channel id + thread ts ==> asst_thread_id
     This function will find the assistant thread id for existing slack thread
@@ -79,9 +79,10 @@ def get_asst_thread_id(slack_channel_id, slack_thread_ts):
             ddb_client.update_item(
                 TableName=ddb_asst_thread_table,
                 Key=ddb_search_key,
-                UpdateExpression="SET asst_thread_id=:asst_thread_id",
+                UpdateExpression="SET asst_thread_id=:asst_thread_id, slack_user_id=:slack_user_id",
                 ExpressionAttributeValues={
-                    ":asst_thread_id": {"S": asst_thread_id}
+                    ":asst_thread_id": {"S": asst_thread_id},
+                    ":slack_user_id": {"S": slack_user_id},
                 }
             )
             logger.info(f'DDB record created for thread: {asst_thread_id}')
@@ -124,7 +125,7 @@ def fetch_slack_thread(slack_channel_id, slack_thread_ts):
     return messages
 
 
-def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, content):
+def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, content, slack_user_id=''):
     ddb_search_key = {
         'slack_channel_id_thread_ts': {'S': f'{slack_channel_id};{slack_thread_ts}'},
         'slack_event_ts': {'S': slack_event_ts},
@@ -133,17 +134,18 @@ def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, co
         ddb_client.update_item(
             TableName=ddb_chat_completion_table,
             Key=ddb_search_key,
-            UpdateExpression='SET #r=:role, content=:content',
+            UpdateExpression='SET #r=:role, content=:content, slack_user_id=:slack_user_id',
             ExpressionAttributeValues={
                 ':role': {'S': role},
                 ':content': {'S': content},
+                ':slack_user_id': {'S': slack_user_id},
             },
             ExpressionAttributeNames={
                 "#r": "role"
             }
         )
         logger.info(
-            f'DDB record created for {role}: {slack_channel_id};{slack_thread_ts}')
+            f'DDB record created for {role}[{slack_user_id}]: {slack_channel_id};{slack_thread_ts}')
     except botocore.exceptions.ClientError as ex:
         logger.error(f'DDB record fail to create: {ex}')
         pass
@@ -160,7 +162,7 @@ def handler_via_assistant(slack_event):
 
     # Get exsiting / Create new thread
     asst_thread_id = get_asst_thread_id(
-        msg_details['channel_id'], msg_details['thread_ts'])
+        msg_details['channel_id'], msg_details['thread_ts'], msg_details['user'])
 
     # Call OpenAI Assistant
     response = agent.ask_assistant(
@@ -194,7 +196,8 @@ def handler_via_chat_completion(slack_event):
 
     # save latest thread msg
     save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],
-                     msg_details['event_ts'], 'user', msg_details['text'])
+                     msg_details['event_ts'], 'user', msg_details['text'],
+                     msg_details['user'])
 
     # pass whole message history to chat completion
     logger.info(f'Call chat completion api')
@@ -211,5 +214,6 @@ def handler_via_chat_completion(slack_event):
 
     # save latest response
     save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],
-                     resp['ts'], 'assistant', response)
+                     resp['ts'], 'assistant', response,
+                     msg_details['user'])
     return

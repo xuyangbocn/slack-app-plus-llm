@@ -3,7 +3,10 @@ import os
 import json
 from datetime import datetime, timezone
 
-from msg_handlers.llm_utils.tool_call_audit import log_func_call
+import boto3
+
+from msg_handlers.llm_utils.tool_access_logger import ToolAccessLogger
+from msg_handlers.llm_utils.tool_access_checker import BaseToolAccessChecker, ToolAccessSampleChecker
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -12,8 +15,18 @@ llm_tools_vars = json.loads(
     os.environ.get('llm_tools_vars', '{}')
 )
 
+cwl = ToolAccessLogger(
+    log_client=boto3.client('logs'),
+    log_group=os.environ['cwlg_tool_call_audit'],
+    log_stream=os.environ['cwls_func_call_audit']
+)
 
-@log_func_call
+# acl = ToolAccessSampleChecker()
+
+
+@cwl.log_func_call()
+# @acl.require_caller_in_groups(groups=["HR", ])
+# @acl.require_caller_has_perms(permissions=["get_bday", ])
 def find_birthday(**args) -> str:
     name = args['name']
     bd = "unknown"
@@ -22,7 +35,7 @@ def find_birthday(**args) -> str:
     return bd
 
 
-@log_func_call
+@cwl.log_func_call()
 def current_datetime(**args) -> str:
     return datetime.now(timezone.utc).isoformat()
 

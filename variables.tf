@@ -19,7 +19,7 @@ variable "msg_handler_name" {
 variable "lambda_msg_handler_timeout" {
   description = "Lambda timeout in second for msg handler"
   type        = number
-  default     = 300
+  default     = 600
 }
 
 variable "lambda_msg_handler_mem" {
