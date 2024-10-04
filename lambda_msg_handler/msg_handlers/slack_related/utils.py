@@ -2,8 +2,13 @@ import logging
 import json
 
 from slack_sdk.errors import SlackApiError
+from slackstyler import SlackStyler
+
 
 logger = logging.getLogger()
+
+# Create a styler instance
+styler = SlackStyler()
 
 
 def extract_event_details(slack_event):
@@ -42,6 +47,11 @@ def get_user_id(email, slack_client):
 def reply(text, channel_id, thread_ts, slack_client):
     # Slack SDK Doc: https://slack.dev/python-slack-sdk/api-docs/slack_sdk/
     # https://api.slack.com/methods/chat.postMessage
+    try:
+        text = styler.convert(text)
+    except:
+        text = text
+
     try:
         resp = slack_client.chat_postMessage(
             channel=channel_id,
