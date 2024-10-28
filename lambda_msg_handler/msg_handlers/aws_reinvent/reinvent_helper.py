@@ -14,21 +14,21 @@ class ReinventHelper(object):
     attr_map = dict(
         sessiontypes={
             'Keynote': 'sessionType_keynote',
-            'Innovation Talk': '1714000626207001Ycfu',
+            'Innovation Talks': '1714000626207001Ycfu',
             'Bootcamp': '1707427142680004EyYF',
-            'Breakout Session': 'sessionType_breakoutSession',
-            'Builders Fair': '1714000626207003YEyA',
-            'Builders Session': '1714000626207004Ym6b',
-            'Chalk Talk': '1707427142680006ExBa',
-            'Code Talk': '1707427142680007EpPU',
-            'Community Activities': '1714000626207007YWLW',
-            'Conference Services': '1714000626207008Yok3',
-            'Dev Chat': '1707427142680008EiAj',
+            'Breakout session': 'sessionType_breakoutSession',
+            'Builders\' Fair': '1714000626207003YEyA',
+            'Builders\' session': '1714000626207004Ym6b',
+            'Chalk talk': '1707427142680006ExBa',
+            'Code talk': '1707427142680007EpPU',
+            'Community activities': '1714000626207007YWLW',
+            'Conference services': '1714000626207008Yok3',
+            'Dev chat': '1707427142680008EiAj',
             'Exam Prep': '1722368262538001acBF',
-            'Gamified Learning': '1707427142680015Eb45',
-            'Interactive Training': '1724785930869001qZpD',
-            'Lightning Talk': '1707427142681002Eid4',
-            'Self-paced Training': '1727195193103001jeql',
+            'Gamified learning': '1707427142680015Eb45',
+            'Interactive training': '1724785930869001qZpD',
+            'Lightning talk': '1707427142681002Eid4',
+            'Self-paced training': '1727195193103001jeql',
             'Workshop': '1707427142681004EMmw',
         },
         topic={
@@ -197,6 +197,10 @@ class ReinventHelper(object):
         '''
         additonal_attrs = ['Topic', 'Areaofinterest',
                            'Level', 'Role', 'Walkuponlysession']
+        reserve_required = [
+            'Bootcamp', 'Breakout session', 'Innovation Talks', 'Chalk talk', 'Code talk',
+            'Workshop', 'Exam Prep', 'Gamified learning', 'Interactive training',
+        ]
         sessions = []
         for rs in raw_sessions:
             s = {
@@ -214,6 +218,9 @@ class ReinventHelper(object):
             for attr in rs['attributevalues']:
                 if attr['attribute_id'] in additonal_attrs:
                     s.setdefault(attr['attribute'], []).append(attr['value'])
+            if s['type'] in reserve_required and s.get('Walkuponlysession', 'NA') == 'NA':
+                s['reservation_require'] = 'Yes'
+
             sessions.append(s)
 
         return sessions
