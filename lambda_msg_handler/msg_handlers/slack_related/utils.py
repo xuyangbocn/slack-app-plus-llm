@@ -7,6 +7,7 @@ from slackstyler import SlackStyler
 
 logger = logging.getLogger()
 
+# Slack SDK Doc: https://slack.dev/python-slack-sdk/api-docs/slack_sdk/
 # Create a styler instance
 styler = SlackStyler()
 
@@ -34,7 +35,6 @@ def extract_event_details(slack_event):
 
 
 def get_user_id(email, slack_client):
-    # Slack SDK Doc: https://slack.dev/python-slack-sdk/api-docs/slack_sdk/
     # https://api.slack.com/methods/users.lookupByEmail
     try:
         resp = slack_client.users_lookupByEmail(email=email)
@@ -44,11 +44,20 @@ def get_user_id(email, slack_client):
     return resp['user']['id']
 
 
-def reply(text, channel_id, thread_ts, slack_client):
-    # Slack SDK Doc: https://slack.dev/python-slack-sdk/api-docs/slack_sdk/
+def get_user_email(user_id, slack_client):
+    # https://api.slack.com/methods/users.info
+    try:
+        resp = slack_client.users_info(user=user_id)
+    except SlackApiError as e:
+        logger.error(f"User id not found {user_id}: {e}")
+        return None
+    return resp['user']['profile']['email']
+
+
+def reply(text, channel_id, thread_ts, slack_client, styled=True):
     # https://api.slack.com/methods/chat.postMessage
     try:
-        text = styler.convert(text)
+        text = styler.convert(text) if styled else text
     except:
         text = text
 

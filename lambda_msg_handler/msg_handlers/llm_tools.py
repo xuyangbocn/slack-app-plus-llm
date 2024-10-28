@@ -1,9 +1,11 @@
 import logging
 import os
 import json
+import concurrent.futures as cf
 from datetime import datetime, timezone
 
 import boto3
+from slack_sdk import WebClient
 
 from msg_handlers.llm_utils.tool_access_logger import ToolAccessLogger
 from msg_handlers.llm_utils.tool_access_checker import BaseToolAccessChecker, ToolAccessSampleChecker
@@ -97,13 +99,11 @@ tools = {
             "type": "function",
             "function": {
                 "name": "find_birthday",
-                "description": "Get the birth date of a person.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "name": {
                             "type": "string",
-                            "description": "Name of the person.",
                         },
                     },
                     "required": ["name"],
@@ -114,71 +114,36 @@ tools = {
             "function": {
                 "name": "current_datetime",
                 "description": "Find current date time in UTC.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
             },
         }, {
             "type": "function",
             "function": {
                 "name": "aws_reinvent_list_session_types",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
             },
         }, {
             "type": "function",
             "function": {
                 "name": "aws_reinvent_list_session_topics",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
             },
         }, {
             "type": "function",
             "function": {
                 "name": "aws_reinvent_list_area_of_interest",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
             },
         }, {
             "type": "function",
             "function": {
                 "name": "aws_reinvent_list_session_technical_levels",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
             },
         }, {
             "type": "function",
             "function": {
                 "name": "aws_reinvent_list_audience_roles",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
             },
         }, {
             "type": "function",
             "function": {
                 "name": "aws_reinvent_list_venues",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
             },
         }, {
             "type": "function",
@@ -240,7 +205,6 @@ tools = {
                                 "type": "string"
                             }
                         },
-
                     },
                     "required": ["search_text"],
                 },

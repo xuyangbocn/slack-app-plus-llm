@@ -42,10 +42,10 @@ agent = Agent(
     model=openai_gpt_model,
     # sentences=[openai_asst_instructions],
     sentences=[
-        "AWS Reinvent is a large conference event which will be hosted in Las vegas in Pacific Standard Time from 2nd to 6th of December 2024.",
+        "AWS Reinvent 2024 is a large conference event which will be hosted in Las vegas in Pacific Standard Time from 2nd to 6th of December in 2024.",
         "During the conference, thousands of varied types of sessions and activities are organized at various timing and various hotel venues in Las Vegas",
         "These sessions cover different topics, touch different level of technicality and target varied audiences.",
-        "You need to assist user to find suitable sessions based on their interest. Please always include session code for easy reference.",
+        "You need to assist user to find suitable sessions based on their interest. Please always include session code for easy reference, and indicate if the session no need reservation.",
         "You also need to help user to plan sessions based on the session starting and end timing.",
         "You can use function calls to search for sessions from AWS",
         "Travel between different hotels will take up to 30 minute, so leave buffer time between sessions when you do planning.",
