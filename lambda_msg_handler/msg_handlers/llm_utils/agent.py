@@ -90,8 +90,8 @@ class Agent(object):
         if not asst:
             logger.info(f'Creating OpenAI asst: {self.asst_config['name']}')
             asst = self.llm_client.beta.assistants.create(**self.asst_config)
-        # else:
-        #     self.llm_client.beta.assistants.update(asst.id, **self.asst_config)
+        else:
+            self.llm_client.beta.assistants.update(asst.id, **self.asst_config)
         return asst
 
     def ask_assistant(
