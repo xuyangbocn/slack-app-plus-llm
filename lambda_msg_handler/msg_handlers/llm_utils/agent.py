@@ -257,5 +257,5 @@ class Agent(object):
 
         except Exception as ex:
             reply = f'Exception raised at Chat Completion: {ex}'
-            logger.error(reply)
+            logger.error(reply, stack_info=True, exc_info=True)
         return reply
