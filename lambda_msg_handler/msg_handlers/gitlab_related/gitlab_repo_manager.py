@@ -1,8 +1,10 @@
 import json
 import logging
 from typing import Union, Optional, List, Dict, Any
+import concurrent.futures as cf
+
 import gitlab
-from gitlab.v4.objects import Project, ProjectTrigger
+from gitlab.v4.objects import Project, ProjectTrigger, ProjectPipeline
 
 
 logger = logging.getLogger()
@@ -56,7 +58,7 @@ class GitLabRepoManager(object):
             logger.warning(f'{self.project.name}: fail to commit {path}.')
         return
 
-    def trigger_pipeline(self, branch: str = '', variables: Dict[str, Any] = {}) -> None:
+    def trigger_pipeline(self, branch: str = '', variables: Dict[str, Any] = {}) -> ProjectPipeline:
         self.trigger = self._get_pipeline_trigger()
         # create trigger if not existed
         if self.trigger is None:
@@ -91,7 +93,7 @@ class GitLabRepoManager(object):
         logger.info(f'{self.project.name}: Trigger created.')
         return trigger
 
-    def _trigger_pipeline(self, trigger_token: str, ref: str, variables: Dict[str, Any]) -> None:
+    def _trigger_pipeline(self, trigger_token: str, ref: str, variables: Dict[str, Any]) -> ProjectPipeline:
         try:
             pipeline = self.project.trigger_pipeline(
                 token=trigger_token,
@@ -117,3 +119,54 @@ class GitLabRepoManager(object):
             logger.info(f'{self.project.name}: Trigger not found.')
 
         return
+
+    def check_pipeline(self, pipeline_id) -> Dict[str, Any]:
+        '''
+        Get pipeline status and failed jobs
+        '''
+        output = {
+            'pipeline_status': None,
+            'failed_jobs': []
+        }
+        pipeline = self.project.pipelines.get(pipeline_id)
+        output['pipeline_status'] = pipeline.status
+
+        if output['pipeline_status'] != "success":
+            failed_jobs = [
+                j for j in pipeline.jobs.list() if j.status == 'failed']
+            with cf.ThreadPoolExecutor() as pool:
+                fs = {
+                    pool.submit(
+                        self.project.jobs.get(j.id, lazy=True).trace
+                    ): {
+                        'job_name': j.name,
+                        'job_status': j.status,
+                    }
+                    for j in failed_jobs
+                }
+                for f in cf.as_completed(fs):
+                    output['failed_jobs'].append(
+                        {
+                            "job_name": fs[f]['job_name'],
+                            "job_status": fs[f]['job_status'],
+                            "job_log": f.result(),
+                        }
+                    )
+        return output
+
+
+def check_project_pipeline_status(
+        gitlab_pa_token: str,
+        gitlab_host: str,
+        project: str,
+        pipeline_id: str
+) -> str:
+    gl = GitLabRepoManager(
+        gitlab_host=gitlab_host,
+        gitlab_pa_token=gitlab_pa_token,
+        project=project,
+        identifier='GitLabRepoManager',
+        ssl_verify=False,  # Set False if cloudflare is on
+    )
+    ret = gl.check_pipeline(pipeline_id)
+    return str(ret)
