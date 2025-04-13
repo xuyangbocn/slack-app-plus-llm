@@ -6,7 +6,7 @@ import os as _os
 from typing_extensions import override
 
 from . import types
-from ._types import NOT_GIVEN, NoneType, NotGiven, Transport, ProxiesTypes
+from ._types import NOT_GIVEN, Omit, NoneType, NotGiven, Transport, ProxiesTypes
 from ._utils import file_from_path
 from ._client import Client, OpenAI, Stream, Timeout, Transport, AsyncClient, AsyncOpenAI, AsyncStream, RequestOptions
 from ._models import BaseModel
@@ -26,11 +26,14 @@ from ._exceptions import (
     AuthenticationError,
     InternalServerError,
     PermissionDeniedError,
+    LengthFinishReasonError,
     UnprocessableEntityError,
     APIResponseValidationError,
+    ContentFilterFinishReasonError,
 )
 from ._base_client import DefaultHttpxClient, DefaultAsyncHttpxClient
 from ._utils._logs import setup_logging as _setup_logging
+from ._legacy_response import HttpxBinaryResponseContent as HttpxBinaryResponseContent
 
 __all__ = [
     "types",
@@ -41,6 +44,7 @@ __all__ = [
     "ProxiesTypes",
     "NotGiven",
     "NOT_GIVEN",
+    "Omit",
     "OpenAIError",
     "APIError",
     "APIStatusError",
@@ -55,6 +59,8 @@ __all__ = [
     "UnprocessableEntityError",
     "RateLimitError",
     "InternalServerError",
+    "LengthFinishReasonError",
+    "ContentFilterFinishReasonError",
     "Timeout",
     "RequestOptions",
     "Client",
@@ -72,7 +78,7 @@ __all__ = [
     "DefaultAsyncHttpxClient",
 ]
 
-from .lib import azure as _azure
+from .lib import azure as _azure, pydantic_function_tool as pydantic_function_tool
 from .version import VERSION as VERSION
 from .lib.azure import AzureOpenAI as AzureOpenAI, AsyncAzureOpenAI as AsyncAzureOpenAI
 from .lib._old_api import *
@@ -346,12 +352,16 @@ from ._module_client import (
     beta as beta,
     chat as chat,
     audio as audio,
+    evals as evals,
     files as files,
     images as images,
     models as models,
     batches as batches,
+    uploads as uploads,
+    responses as responses,
     embeddings as embeddings,
     completions as completions,
     fine_tuning as fine_tuning,
     moderations as moderations,
+    vector_stores as vector_stores,
 )

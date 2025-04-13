@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Union, Iterable, Optional, overload
-from typing_extensions import Literal
+from typing import Dict, List, Union, Iterable, Optional
+from typing_extensions import Literal, overload
 
 import httpx
 
@@ -31,10 +31,21 @@ __all__ = ["Completions", "AsyncCompletions"]
 class Completions(SyncAPIResource):
     @cached_property
     def with_raw_response(self) -> CompletionsWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return CompletionsWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> CompletionsWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return CompletionsWithStreamingResponse(self)
 
     @overload
@@ -73,8 +84,8 @@ class Completions(SyncAPIResource):
           model: ID of the model to use. You can use the
               [List models](https://platform.openai.com/docs/api-reference/models/list) API to
               see all of your available models, or see our
-              [Model overview](https://platform.openai.com/docs/models/overview) for
-              descriptions of them.
+              [Model overview](https://platform.openai.com/docs/models) for descriptions of
+              them.
 
           prompt: The prompt(s) to generate completions for, encoded as a string, array of
               strings, array of tokens, or array of token arrays.
@@ -99,7 +110,7 @@ class Completions(SyncAPIResource):
               existing frequency in the text so far, decreasing the model's likelihood to
               repeat the same line verbatim.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           logit_bias: Modify the likelihood of specified tokens appearing in the completion.
 
@@ -139,7 +150,7 @@ class Completions(SyncAPIResource):
               whether they appear in the text so far, increasing the model's likelihood to
               talk about new topics.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           seed: If specified, our system will make a best effort to sample deterministically,
               such that repeated requests with the same `seed` and parameters should return
@@ -178,7 +189,7 @@ class Completions(SyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -226,8 +237,8 @@ class Completions(SyncAPIResource):
           model: ID of the model to use. You can use the
               [List models](https://platform.openai.com/docs/api-reference/models/list) API to
               see all of your available models, or see our
-              [Model overview](https://platform.openai.com/docs/models/overview) for
-              descriptions of them.
+              [Model overview](https://platform.openai.com/docs/models) for descriptions of
+              them.
 
           prompt: The prompt(s) to generate completions for, encoded as a string, array of
               strings, array of tokens, or array of token arrays.
@@ -259,7 +270,7 @@ class Completions(SyncAPIResource):
               existing frequency in the text so far, decreasing the model's likelihood to
               repeat the same line verbatim.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           logit_bias: Modify the likelihood of specified tokens appearing in the completion.
 
@@ -299,7 +310,7 @@ class Completions(SyncAPIResource):
               whether they appear in the text so far, increasing the model's likelihood to
               talk about new topics.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           seed: If specified, our system will make a best effort to sample deterministically,
               such that repeated requests with the same `seed` and parameters should return
@@ -331,7 +342,7 @@ class Completions(SyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -379,8 +390,8 @@ class Completions(SyncAPIResource):
           model: ID of the model to use. You can use the
               [List models](https://platform.openai.com/docs/api-reference/models/list) API to
               see all of your available models, or see our
-              [Model overview](https://platform.openai.com/docs/models/overview) for
-              descriptions of them.
+              [Model overview](https://platform.openai.com/docs/models) for descriptions of
+              them.
 
           prompt: The prompt(s) to generate completions for, encoded as a string, array of
               strings, array of tokens, or array of token arrays.
@@ -412,7 +423,7 @@ class Completions(SyncAPIResource):
               existing frequency in the text so far, decreasing the model's likelihood to
               repeat the same line verbatim.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           logit_bias: Modify the likelihood of specified tokens appearing in the completion.
 
@@ -452,7 +463,7 @@ class Completions(SyncAPIResource):
               whether they appear in the text so far, increasing the model's likelihood to
               talk about new topics.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           seed: If specified, our system will make a best effort to sample deterministically,
               such that repeated requests with the same `seed` and parameters should return
@@ -484,7 +495,7 @@ class Completions(SyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -548,7 +559,9 @@ class Completions(SyncAPIResource):
                     "top_p": top_p,
                     "user": user,
                 },
-                completion_create_params.CompletionCreateParams,
+                completion_create_params.CompletionCreateParamsStreaming
+                if stream
+                else completion_create_params.CompletionCreateParamsNonStreaming,
             ),
             options=make_request_options(
                 extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout
@@ -562,10 +575,21 @@ class Completions(SyncAPIResource):
 class AsyncCompletions(AsyncAPIResource):
     @cached_property
     def with_raw_response(self) -> AsyncCompletionsWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return AsyncCompletionsWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> AsyncCompletionsWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return AsyncCompletionsWithStreamingResponse(self)
 
     @overload
@@ -604,8 +628,8 @@ class AsyncCompletions(AsyncAPIResource):
           model: ID of the model to use. You can use the
               [List models](https://platform.openai.com/docs/api-reference/models/list) API to
               see all of your available models, or see our
-              [Model overview](https://platform.openai.com/docs/models/overview) for
-              descriptions of them.
+              [Model overview](https://platform.openai.com/docs/models) for descriptions of
+              them.
 
           prompt: The prompt(s) to generate completions for, encoded as a string, array of
               strings, array of tokens, or array of token arrays.
@@ -630,7 +654,7 @@ class AsyncCompletions(AsyncAPIResource):
               existing frequency in the text so far, decreasing the model's likelihood to
               repeat the same line verbatim.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           logit_bias: Modify the likelihood of specified tokens appearing in the completion.
 
@@ -670,7 +694,7 @@ class AsyncCompletions(AsyncAPIResource):
               whether they appear in the text so far, increasing the model's likelihood to
               talk about new topics.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           seed: If specified, our system will make a best effort to sample deterministically,
               such that repeated requests with the same `seed` and parameters should return
@@ -709,7 +733,7 @@ class AsyncCompletions(AsyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -757,8 +781,8 @@ class AsyncCompletions(AsyncAPIResource):
           model: ID of the model to use. You can use the
               [List models](https://platform.openai.com/docs/api-reference/models/list) API to
               see all of your available models, or see our
-              [Model overview](https://platform.openai.com/docs/models/overview) for
-              descriptions of them.
+              [Model overview](https://platform.openai.com/docs/models) for descriptions of
+              them.
 
           prompt: The prompt(s) to generate completions for, encoded as a string, array of
               strings, array of tokens, or array of token arrays.
@@ -790,7 +814,7 @@ class AsyncCompletions(AsyncAPIResource):
               existing frequency in the text so far, decreasing the model's likelihood to
               repeat the same line verbatim.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           logit_bias: Modify the likelihood of specified tokens appearing in the completion.
 
@@ -830,7 +854,7 @@ class AsyncCompletions(AsyncAPIResource):
               whether they appear in the text so far, increasing the model's likelihood to
               talk about new topics.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           seed: If specified, our system will make a best effort to sample deterministically,
               such that repeated requests with the same `seed` and parameters should return
@@ -862,7 +886,7 @@ class AsyncCompletions(AsyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -910,8 +934,8 @@ class AsyncCompletions(AsyncAPIResource):
           model: ID of the model to use. You can use the
               [List models](https://platform.openai.com/docs/api-reference/models/list) API to
               see all of your available models, or see our
-              [Model overview](https://platform.openai.com/docs/models/overview) for
-              descriptions of them.
+              [Model overview](https://platform.openai.com/docs/models) for descriptions of
+              them.
 
           prompt: The prompt(s) to generate completions for, encoded as a string, array of
               strings, array of tokens, or array of token arrays.
@@ -943,7 +967,7 @@ class AsyncCompletions(AsyncAPIResource):
               existing frequency in the text so far, decreasing the model's likelihood to
               repeat the same line verbatim.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           logit_bias: Modify the likelihood of specified tokens appearing in the completion.
 
@@ -983,7 +1007,7 @@ class AsyncCompletions(AsyncAPIResource):
               whether they appear in the text so far, increasing the model's likelihood to
               talk about new topics.
 
-              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation/parameter-details)
+              [See more information about frequency and presence penalties.](https://platform.openai.com/docs/guides/text-generation)
 
           seed: If specified, our system will make a best effort to sample deterministically,
               such that repeated requests with the same `seed` and parameters should return
@@ -1015,7 +1039,7 @@ class AsyncCompletions(AsyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -1079,7 +1103,9 @@ class AsyncCompletions(AsyncAPIResource):
                     "top_p": top_p,
                     "user": user,
                 },
-                completion_create_params.CompletionCreateParams,
+                completion_create_params.CompletionCreateParamsStreaming
+                if stream
+                else completion_create_params.CompletionCreateParamsNonStreaming,
             ),
             options=make_request_options(
                 extra_headers=extra_headers, extra_query=extra_query, extra_body=extra_body, timeout=timeout

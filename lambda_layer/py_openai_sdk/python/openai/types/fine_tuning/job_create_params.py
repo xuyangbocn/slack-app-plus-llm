@@ -5,15 +5,27 @@ from __future__ import annotations
 from typing import List, Union, Iterable, Optional
 from typing_extensions import Literal, Required, TypedDict
 
-__all__ = ["JobCreateParams", "Hyperparameters", "Integration", "IntegrationWandb"]
+from ..shared_params.metadata import Metadata
+
+__all__ = [
+    "JobCreateParams",
+    "Hyperparameters",
+    "Integration",
+    "IntegrationWandb",
+    "Method",
+    "MethodDpo",
+    "MethodDpoHyperparameters",
+    "MethodSupervised",
+    "MethodSupervisedHyperparameters",
+]
 
 
 class JobCreateParams(TypedDict, total=False):
-    model: Required[Union[str, Literal["babbage-002", "davinci-002", "gpt-3.5-turbo"]]]
+    model: Required[Union[str, Literal["babbage-002", "davinci-002", "gpt-3.5-turbo", "gpt-4o-mini"]]]
     """The name of the model to fine-tune.
 
     You can select one of the
-    [supported models](https://platform.openai.com/docs/guides/fine-tuning/what-models-can-be-fine-tuned).
+    [supported models](https://platform.openai.com/docs/guides/fine-tuning#which-models-can-be-fine-tuned).
     """
 
     training_file: Required[str]
@@ -26,8 +38,10 @@ class JobCreateParams(TypedDict, total=False):
     your file with the purpose `fine-tune`.
 
     The contents of the file should differ depending on if the model uses the
-    [chat](https://platform.openai.com/docs/api-reference/fine-tuning/chat-input) or
+    [chat](https://platform.openai.com/docs/api-reference/fine-tuning/chat-input),
     [completions](https://platform.openai.com/docs/api-reference/fine-tuning/completions-input)
+    format, or if the fine-tuning method uses the
+    [preference](https://platform.openai.com/docs/api-reference/fine-tuning/preference-input)
     format.
 
     See the [fine-tuning guide](https://platform.openai.com/docs/guides/fine-tuning)
@@ -35,10 +49,26 @@ class JobCreateParams(TypedDict, total=False):
     """
 
     hyperparameters: Hyperparameters
-    """The hyperparameters used for the fine-tuning job."""
+    """
+    The hyperparameters used for the fine-tuning job. This value is now deprecated
+    in favor of `method`, and should be passed in under the `method` parameter.
+    """
 
     integrations: Optional[Iterable[Integration]]
     """A list of integrations to enable for your fine-tuning job."""
+
+    metadata: Optional[Metadata]
+    """Set of 16 key-value pairs that can be attached to an object.
+
+    This can be useful for storing additional information about the object in a
+    structured format, and querying for objects via API or the dashboard.
+
+    Keys are strings with a maximum length of 64 characters. Values are strings with
+    a maximum length of 512 characters.
+    """
+
+    method: Method
+    """The method used for fine-tuning."""
 
     seed: Optional[int]
     """The seed controls the reproducibility of the job.
@@ -50,11 +80,11 @@ class JobCreateParams(TypedDict, total=False):
 
     suffix: Optional[str]
     """
-    A string of up to 18 characters that will be added to your fine-tuned model
+    A string of up to 64 characters that will be added to your fine-tuned model
     name.
 
     For example, a `suffix` of "custom-model-name" would produce a model name like
-    `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.
+    `ft:gpt-4o-mini:openai:custom-model-name:7p4lURel`.
     """
 
     validation_file: Optional[str]
@@ -134,3 +164,73 @@ class Integration(TypedDict, total=False):
     can set an explicit display name for your run, add tags to your run, and set a
     default entity (team, username, etc) to be associated with your run.
     """
+
+
+class MethodDpoHyperparameters(TypedDict, total=False):
+    batch_size: Union[Literal["auto"], int]
+    """Number of examples in each batch.
+
+    A larger batch size means that model parameters are updated less frequently, but
+    with lower variance.
+    """
+
+    beta: Union[Literal["auto"], float]
+    """The beta value for the DPO method.
+
+    A higher beta value will increase the weight of the penalty between the policy
+    and reference model.
+    """
+
+    learning_rate_multiplier: Union[Literal["auto"], float]
+    """Scaling factor for the learning rate.
+
+    A smaller learning rate may be useful to avoid overfitting.
+    """
+
+    n_epochs: Union[Literal["auto"], int]
+    """The number of epochs to train the model for.
+
+    An epoch refers to one full cycle through the training dataset.
+    """
+
+
+class MethodDpo(TypedDict, total=False):
+    hyperparameters: MethodDpoHyperparameters
+    """The hyperparameters used for the fine-tuning job."""
+
+
+class MethodSupervisedHyperparameters(TypedDict, total=False):
+    batch_size: Union[Literal["auto"], int]
+    """Number of examples in each batch.
+
+    A larger batch size means that model parameters are updated less frequently, but
+    with lower variance.
+    """
+
+    learning_rate_multiplier: Union[Literal["auto"], float]
+    """Scaling factor for the learning rate.
+
+    A smaller learning rate may be useful to avoid overfitting.
+    """
+
+    n_epochs: Union[Literal["auto"], int]
+    """The number of epochs to train the model for.
+
+    An epoch refers to one full cycle through the training dataset.
+    """
+
+
+class MethodSupervised(TypedDict, total=False):
+    hyperparameters: MethodSupervisedHyperparameters
+    """The hyperparameters used for the fine-tuning job."""
+
+
+class Method(TypedDict, total=False):
+    dpo: MethodDpo
+    """Configuration for the DPO fine-tuning method."""
+
+    supervised: MethodSupervised
+    """Configuration for the supervised fine-tuning method."""
+
+    type: Literal["supervised", "dpo"]
+    """The type of method. Is either `supervised` or `dpo`."""

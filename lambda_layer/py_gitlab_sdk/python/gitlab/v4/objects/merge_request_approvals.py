@@ -7,8 +7,8 @@ from gitlab.mixins import (
     CRUDMixin,
     DeleteMixin,
     GetWithoutIdMixin,
-    ListMixin,
     ObjectDeleteMixin,
+    RetrieveMixin,
     SaveMixin,
     UpdateMethod,
     UpdateMixin,
@@ -16,6 +16,8 @@ from gitlab.mixins import (
 from gitlab.types import RequiredOptional
 
 __all__ = [
+    "GroupApprovalRule",
+    "GroupApprovalRuleManager",
     "ProjectApproval",
     "ProjectApprovalManager",
     "ProjectApprovalRule",
@@ -27,6 +29,26 @@ __all__ = [
     "ProjectMergeRequestApprovalState",
     "ProjectMergeRequestApprovalStateManager",
 ]
+
+
+class GroupApprovalRule(SaveMixin, RESTObject):
+    _id_attr = "id"
+    _repr_attr = "name"
+
+
+class GroupApprovalRuleManager(RetrieveMixin, CreateMixin, UpdateMixin, RESTManager):
+    _path = "/groups/{group_id}/approval_rules"
+    _obj_cls = GroupApprovalRule
+    _from_parent_attrs = {"group_id": "id"}
+    _create_attrs = RequiredOptional(
+        required=("name", "approvals_required"),
+        optional=("user_ids", "group_ids", "rule_type"),
+    )
+
+    def get(
+        self, id: Union[str, int], lazy: bool = False, **kwargs: Any
+    ) -> GroupApprovalRule:
+        return cast(GroupApprovalRule, super().get(id=id, lazy=lazy, **kwargs))
 
 
 class ProjectApproval(SaveMixin, RESTObject):
@@ -54,10 +76,11 @@ class ProjectApprovalManager(GetWithoutIdMixin, UpdateMixin, RESTManager):
 
 class ProjectApprovalRule(SaveMixin, ObjectDeleteMixin, RESTObject):
     _id_attr = "id"
+    _repr_attr = "name"
 
 
 class ProjectApprovalRuleManager(
-    ListMixin, CreateMixin, UpdateMixin, DeleteMixin, RESTManager
+    RetrieveMixin, CreateMixin, UpdateMixin, DeleteMixin, RESTManager
 ):
     _path = "/projects/{project_id}/approval_rules"
     _obj_cls = ProjectApprovalRule
@@ -66,6 +89,11 @@ class ProjectApprovalRuleManager(
         required=("name", "approvals_required"),
         optional=("user_ids", "group_ids", "protected_branch_ids", "usernames"),
     )
+
+    def get(
+        self, id: Union[str, int], lazy: bool = False, **kwargs: Any
+    ) -> ProjectApprovalRule:
+        return cast(ProjectApprovalRule, super().get(id=id, lazy=lazy, **kwargs))
 
 
 class ProjectMergeRequestApproval(SaveMixin, RESTObject):

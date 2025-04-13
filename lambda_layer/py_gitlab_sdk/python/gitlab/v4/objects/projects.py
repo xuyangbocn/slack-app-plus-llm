@@ -11,7 +11,9 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Literal,
     Optional,
+    overload,
     TYPE_CHECKING,
     Union,
 )
@@ -78,7 +80,7 @@ from .notes import ProjectNoteManager  # noqa: F401
 from .notification_settings import ProjectNotificationSettingsManager  # noqa: F401
 from .package_protection_rules import ProjectPackageProtectionRuleManager
 from .packages import GenericPackageManager, ProjectPackageManager  # noqa: F401
-from .pages import ProjectPagesDomainManager  # noqa: F401
+from .pages import ProjectPagesDomainManager, ProjectPagesManager  # noqa: F401
 from .pipelines import (  # noqa: F401
     ProjectPipeline,
     ProjectPipelineManager,
@@ -86,7 +88,10 @@ from .pipelines import (  # noqa: F401
 )
 from .project_access_tokens import ProjectAccessTokenManager  # noqa: F401
 from .push_rules import ProjectPushRulesManager  # noqa: F401
-from .registry_protection_rules import (  # noqa: F401
+from .registry_protection_repository_rules import (  # noqa: F401
+    ProjectRegistryRepositoryProtectionRuleManager,
+)
+from .registry_protection_rules import (  # noqa: F401; deprecated
     ProjectRegistryProtectionRuleManager,
 )
 from .releases import ProjectReleaseManager  # noqa: F401
@@ -99,7 +104,16 @@ from .statistics import (  # noqa: F401
     ProjectAdditionalStatisticsManager,
     ProjectIssuesStatisticsManager,
 )
+from .status_checks import ProjectExternalStatusCheckManager  # noqa: F401
 from .tags import ProjectProtectedTagManager, ProjectTagManager  # noqa: F401
+from .templates import (  # noqa: F401
+    ProjectDockerfileTemplateManager,
+    ProjectGitignoreTemplateManager,
+    ProjectGitlabciymlTemplateManager,
+    ProjectIssueTemplateManager,
+    ProjectLicenseTemplateManager,
+    ProjectMergeRequestTemplateManager,
+)
 from .triggers import ProjectTriggerManager  # noqa: F401
 from .users import ProjectUserManager  # noqa: F401
 from .variables import ProjectVariableManager  # noqa: F401
@@ -114,6 +128,8 @@ __all__ = [
     "ProjectForkManager",
     "ProjectRemoteMirror",
     "ProjectRemoteMirrorManager",
+    "ProjectPullMirror",
+    "ProjectPullMirrorManager",
     "ProjectStorage",
     "ProjectStorageManager",
     "SharedProject",
@@ -189,33 +205,40 @@ class Project(
     customattributes: ProjectCustomAttributeManager
     deployments: ProjectDeploymentManager
     deploytokens: ProjectDeployTokenManager
+    dockerfile_templates: ProjectDockerfileTemplateManager
     environments: ProjectEnvironmentManager
     events: ProjectEventManager
     exports: ProjectExportManager
     files: ProjectFileManager
     forks: "ProjectForkManager"
     generic_packages: GenericPackageManager
+    gitignore_templates: ProjectGitignoreTemplateManager
+    gitlabciyml_templates: ProjectGitlabciymlTemplateManager
     groups: ProjectGroupManager
     hooks: ProjectHookManager
     imports: ProjectImportManager
     integrations: ProjectIntegrationManager
     invitations: ProjectInvitationManager
     issues: ProjectIssueManager
+    issue_templates: ProjectIssueTemplateManager
     issues_statistics: ProjectIssuesStatisticsManager
     iterations: ProjectIterationManager
     jobs: ProjectJobManager
     job_token_scope: ProjectJobTokenScopeManager
     keys: ProjectKeyManager
     labels: ProjectLabelManager
+    license_templates: ProjectLicenseTemplateManager
     members: ProjectMemberManager
     members_all: ProjectMemberAllManager
     mergerequests: ProjectMergeRequestManager
+    merge_request_templates: ProjectMergeRequestTemplateManager
     merge_trains: ProjectMergeTrainManager
     milestones: ProjectMilestoneManager
     notes: ProjectNoteManager
     notificationsettings: ProjectNotificationSettingsManager
     packages: ProjectPackageManager
     package_protection_rules: ProjectPackageProtectionRuleManager
+    pages: ProjectPagesManager
     pagesdomains: ProjectPagesDomainManager
     pipelines: ProjectPipelineManager
     pipelineschedules: ProjectPipelineScheduleManager
@@ -224,14 +247,17 @@ class Project(
     protectedtags: ProjectProtectedTagManager
     pushrules: ProjectPushRulesManager
     registry_protection_rules: ProjectRegistryProtectionRuleManager
+    registry_protection_repository_rules: ProjectRegistryRepositoryProtectionRuleManager
     releases: ProjectReleaseManager
     resource_groups: ProjectResourceGroupManager
     remote_mirrors: "ProjectRemoteMirrorManager"
+    pull_mirror: "ProjectPullMirrorManager"
     repositories: ProjectRegistryRepositoryManager
     runners: ProjectRunnerManager
     secure_files: ProjectSecureFileManager
     services: ProjectServiceManager
     snippets: ProjectSnippetManager
+    external_status_checks: ProjectExternalStatusCheckManager
     storage: "ProjectStorageManager"
     tags: ProjectTagManager
     triggers: ProjectTriggerManager
@@ -468,13 +494,49 @@ class Project(
         path = f"/projects/{self.encoded_id}/restore"
         self.manager.gitlab.http_post(path, **kwargs)
 
+    @overload
+    def snapshot(
+        self,
+        wiki: bool = False,
+        streamed: Literal[False] = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> bytes: ...
+
+    @overload
+    def snapshot(
+        self,
+        wiki: bool = False,
+        streamed: bool = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[True] = True,
+        **kwargs: Any,
+    ) -> Iterator[Any]: ...
+
+    @overload
+    def snapshot(
+        self,
+        wiki: bool = False,
+        streamed: Literal[True] = True,
+        action: Optional[Callable[[bytes], Any]] = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> None: ...
+
     @cli.register_custom_action(cls_names="Project", optional=("wiki",))
     @exc.on_http_error(exc.GitlabGetError)
     def snapshot(
         self,
         wiki: bool = False,
         streamed: bool = False,
-        action: Optional[Callable[[bytes], None]] = None,
+        action: Optional[Callable[[bytes], Any]] = None,
         chunk_size: int = 1024,
         *,
         iterator: bool = False,
@@ -546,6 +608,13 @@ class Project(
             GitlabAuthenticationError: If authentication is not correct
             GitlabCreateError: If the server failed to perform the request
         """
+        utils.warn(
+            message=(
+                "project.mirror_pull() is deprecated and will be removed in a "
+                "future major version. Use project.pull_mirror.start() instead."
+            ),
+            category=DeprecationWarning,
+        )
         path = f"/projects/{self.encoded_id}/mirror/pull"
         self.manager.gitlab.http_post(path, **kwargs)
 
@@ -566,6 +635,13 @@ class Project(
         Returns:
             dict of the parsed json returned by the server
         """
+        utils.warn(
+            message=(
+                "project.mirror_pull_details() is deprecated and will be removed in a "
+                "future major version. Use project.pull_mirror.get() instead."
+            ),
+            category=DeprecationWarning,
+        )
         path = f"/projects/{self.encoded_id}/mirror/pull"
         result = self.manager.gitlab.http_get(path, **kwargs)
         if TYPE_CHECKING:
@@ -1179,6 +1255,65 @@ class ProjectRemoteMirrorManager(
         required=("url",), optional=("enabled", "only_protected_branches")
     )
     _update_attrs = RequiredOptional(optional=("enabled", "only_protected_branches"))
+
+
+class ProjectPullMirror(SaveMixin, RESTObject):
+    _id_attr = None
+
+
+class ProjectPullMirrorManager(GetWithoutIdMixin, UpdateMixin, RESTManager):
+    _path = "/projects/{project_id}/mirror/pull"
+    _obj_cls = ProjectPullMirror
+    _from_parent_attrs = {"project_id": "id"}
+    _update_attrs = RequiredOptional(optional=("url",))
+
+    def get(self, **kwargs: Any) -> ProjectPullMirror:
+        return cast(ProjectPullMirror, super().get(**kwargs))
+
+    @exc.on_http_error(exc.GitlabCreateError)
+    def create(self, data: Dict[str, Any], **kwargs: Any) -> ProjectPullMirror:
+        """Create a new object.
+
+        Args:
+            data: parameters to send to the server to create the
+                         resource
+            **kwargs: Extra options to send to the server (e.g. sudo)
+
+        Returns:
+            A new instance of the managed object class built with
+                the data sent by the server
+
+        Raises:
+            GitlabAuthenticationError: If authentication is not correct
+            GitlabCreateError: If the server cannot perform the request
+        """
+        if TYPE_CHECKING:
+            assert data is not None
+        self._create_attrs.validate_attrs(data=data)
+
+        if TYPE_CHECKING:
+            assert self.path is not None
+        server_data = self.gitlab.http_put(self.path, post_data=data, **kwargs)
+
+        if TYPE_CHECKING:
+            assert not isinstance(server_data, requests.Response)
+        return self._obj_cls(self, server_data)
+
+    @cli.register_custom_action(cls_names="ProjectPullMirrorManager")
+    @exc.on_http_error(exc.GitlabCreateError)
+    def start(self, **kwargs: Any) -> None:
+        """Start the pull mirroring process for the project.
+
+        Args:
+            **kwargs: Extra options to send to the server (e.g. sudo)
+
+        Raises:
+            GitlabAuthenticationError: If authentication is not correct
+            GitlabCreateError: If the server failed to perform the request
+        """
+        if TYPE_CHECKING:
+            assert self.path is not None
+        self.gitlab.http_post(self.path, **kwargs)
 
 
 class ProjectStorage(RefreshMixin, RESTObject):

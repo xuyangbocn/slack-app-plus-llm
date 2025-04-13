@@ -66,6 +66,7 @@ __all__ = (
     'almost_equal_floats',
     'get_model',
     'to_camel',
+    'to_lower_camel',
     'is_valid_field',
     'smart_deepcopy',
     'PyObjectStr',
@@ -158,7 +159,7 @@ def sequence_like(v: Any) -> bool:
     return isinstance(v, (list, tuple, set, frozenset, GeneratorType, deque))
 
 
-def validate_field_name(bases: List[Type['BaseModel']], field_name: str) -> None:
+def validate_field_name(bases: Iterable[Type[Any]], field_name: str) -> None:
     """
     Ensure that the field's name does not shadow an existing attribute of the model.
     """
@@ -707,6 +708,8 @@ DUNDER_ATTRIBUTES = {
     '__orig_bases__',
     '__orig_class__',
     '__qualname__',
+    '__firstlineno__',
+    '__static_attributes__',
 }
 
 

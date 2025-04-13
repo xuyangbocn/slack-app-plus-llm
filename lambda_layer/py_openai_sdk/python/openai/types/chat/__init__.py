@@ -4,12 +4,29 @@ from __future__ import annotations
 
 from .chat_completion import ChatCompletion as ChatCompletion
 from .chat_completion_role import ChatCompletionRole as ChatCompletionRole
+from .chat_completion_audio import ChatCompletionAudio as ChatCompletionAudio
 from .chat_completion_chunk import ChatCompletionChunk as ChatCompletionChunk
+from .completion_list_params import CompletionListParams as CompletionListParams
+from .parsed_chat_completion import (
+    ParsedChoice as ParsedChoice,
+    ParsedChatCompletion as ParsedChatCompletion,
+    ParsedChatCompletionMessage as ParsedChatCompletionMessage,
+)
+from .chat_completion_deleted import ChatCompletionDeleted as ChatCompletionDeleted
 from .chat_completion_message import ChatCompletionMessage as ChatCompletionMessage
+from .chat_completion_modality import ChatCompletionModality as ChatCompletionModality
 from .completion_create_params import CompletionCreateParams as CompletionCreateParams
+from .completion_update_params import CompletionUpdateParams as CompletionUpdateParams
+from .parsed_function_tool_call import (
+    ParsedFunction as ParsedFunction,
+    ParsedFunctionToolCall as ParsedFunctionToolCall,
+)
 from .chat_completion_tool_param import ChatCompletionToolParam as ChatCompletionToolParam
+from .chat_completion_audio_param import ChatCompletionAudioParam as ChatCompletionAudioParam
 from .chat_completion_message_param import ChatCompletionMessageParam as ChatCompletionMessageParam
+from .chat_completion_store_message import ChatCompletionStoreMessage as ChatCompletionStoreMessage
 from .chat_completion_token_logprob import ChatCompletionTokenLogprob as ChatCompletionTokenLogprob
+from .chat_completion_reasoning_effort import ChatCompletionReasoningEffort as ChatCompletionReasoningEffort
 from .chat_completion_message_tool_call import ChatCompletionMessageToolCall as ChatCompletionMessageToolCall
 from .chat_completion_content_part_param import ChatCompletionContentPartParam as ChatCompletionContentPartParam
 from .chat_completion_tool_message_param import ChatCompletionToolMessageParam as ChatCompletionToolMessageParam
@@ -25,6 +42,9 @@ from .chat_completion_assistant_message_param import (
 from .chat_completion_content_part_text_param import (
     ChatCompletionContentPartTextParam as ChatCompletionContentPartTextParam,
 )
+from .chat_completion_developer_message_param import (
+    ChatCompletionDeveloperMessageParam as ChatCompletionDeveloperMessageParam,
+)
 from .chat_completion_message_tool_call_param import (
     ChatCompletionMessageToolCallParam as ChatCompletionMessageToolCallParam,
 )
@@ -34,9 +54,18 @@ from .chat_completion_named_tool_choice_param import (
 from .chat_completion_content_part_image_param import (
     ChatCompletionContentPartImageParam as ChatCompletionContentPartImageParam,
 )
+from .chat_completion_prediction_content_param import (
+    ChatCompletionPredictionContentParam as ChatCompletionPredictionContentParam,
+)
 from .chat_completion_tool_choice_option_param import (
     ChatCompletionToolChoiceOptionParam as ChatCompletionToolChoiceOptionParam,
 )
+from .chat_completion_content_part_refusal_param import (
+    ChatCompletionContentPartRefusalParam as ChatCompletionContentPartRefusalParam,
+)
 from .chat_completion_function_call_option_param import (
     ChatCompletionFunctionCallOptionParam as ChatCompletionFunctionCallOptionParam,
+)
+from .chat_completion_content_part_input_audio_param import (
+    ChatCompletionContentPartInputAudioParam as ChatCompletionContentPartInputAudioParam,
 )

@@ -5,6 +5,7 @@ from typing_extensions import Literal
 
 from ..._models import BaseModel
 from .assistant_tool import AssistantTool
+from ..shared.metadata import Metadata
 from .assistant_response_format_option import AssistantResponseFormatOption
 
 __all__ = ["Assistant", "ToolResources", "ToolResourcesCodeInterpreter", "ToolResourcesFileSearch"]
@@ -51,12 +52,14 @@ class Assistant(BaseModel):
     The maximum length is 256,000 characters.
     """
 
-    metadata: Optional[object] = None
+    metadata: Optional[Metadata] = None
     """Set of 16 key-value pairs that can be attached to an object.
 
     This can be useful for storing additional information about the object in a
-    structured format. Keys can be a maximum of 64 characters long and values can be
-    a maxium of 512 characters long.
+    structured format, and querying for objects via API or the dashboard.
+
+    Keys are strings with a maximum length of 64 characters. Values are strings with
+    a maximum length of 512 characters.
     """
 
     model: str
@@ -65,8 +68,8 @@ class Assistant(BaseModel):
     You can use the
     [List models](https://platform.openai.com/docs/api-reference/models/list) API to
     see all of your available models, or see our
-    [Model overview](https://platform.openai.com/docs/models/overview) for
-    descriptions of them.
+    [Model overview](https://platform.openai.com/docs/models) for descriptions of
+    them.
     """
 
     name: Optional[str] = None
@@ -85,11 +88,16 @@ class Assistant(BaseModel):
     response_format: Optional[AssistantResponseFormatOption] = None
     """Specifies the format that the model must output.
 
-    Compatible with [GPT-4o](https://platform.openai.com/docs/models/gpt-4o),
-    [GPT-4 Turbo](https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4),
+    Compatible with [GPT-4o](https://platform.openai.com/docs/models#gpt-4o),
+    [GPT-4 Turbo](https://platform.openai.com/docs/models#gpt-4-turbo-and-gpt-4),
     and all GPT-3.5 Turbo models since `gpt-3.5-turbo-1106`.
 
-    Setting to `{ "type": "json_object" }` enables JSON mode, which guarantees the
+    Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured
+    Outputs which ensures the model will match your supplied JSON schema. Learn more
+    in the
+    [Structured Outputs guide](https://platform.openai.com/docs/guides/structured-outputs).
+
+    Setting to `{ "type": "json_object" }` enables JSON mode, which ensures the
     message the model generates is valid JSON.
 
     **Important:** when using JSON mode, you **must** also instruct the model to

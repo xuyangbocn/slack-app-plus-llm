@@ -7,13 +7,14 @@ import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Tuple, TypeVar
+from typing import Any, TypeVar
 
 from .. import (
     BrokenResourceError,
     EndOfStream,
     aclose_forcefully,
     get_cancelled_exc_class,
+    to_thread,
 )
 from .._core._typedattr import TypedAttributeSet, typed_attribute
 from ..abc import AnyByteStream, ByteStream, Listener, TaskGroup
@@ -25,8 +26,8 @@ else:
 
 T_Retval = TypeVar("T_Retval")
 PosArgsT = TypeVarTuple("PosArgsT")
-_PCTRTT = Tuple[Tuple[str, str], ...]
-_PCTRTTT = Tuple[_PCTRTT, ...]
+_PCTRTT = tuple[tuple[str, str], ...]
+_PCTRTTT = tuple[_PCTRTT, ...]
 
 
 class TLSAttribute(TypedAttributeSet):
@@ -119,9 +120,23 @@ class TLSStream(ByteStream):
 
         bio_in = ssl.MemoryBIO()
         bio_out = ssl.MemoryBIO()
-        ssl_object = ssl_context.wrap_bio(
-            bio_in, bio_out, server_side=server_side, server_hostname=hostname
-        )
+
+        # External SSLContext implementations may do blocking I/O in wrap_bio(),
+        # but the standard library implementation won't
+        if type(ssl_context) is ssl.SSLContext:
+            ssl_object = ssl_context.wrap_bio(
+                bio_in, bio_out, server_side=server_side, server_hostname=hostname
+            )
+        else:
+            ssl_object = await to_thread.run_sync(
+                ssl_context.wrap_bio,
+                bio_in,
+                bio_out,
+                server_side,
+                hostname,
+                None,
+            )
+
         wrapper = cls(
             transport_stream=transport_stream,
             standard_compatible=standard_compatible,
@@ -162,9 +177,8 @@ class TLSStream(ByteStream):
             except ssl.SSLError as exc:
                 self._read_bio.write_eof()
                 self._write_bio.write_eof()
-                if (
-                    isinstance(exc, ssl.SSLEOFError)
-                    or "UNEXPECTED_EOF_WHILE_READING" in exc.strerror
+                if isinstance(exc, ssl.SSLEOFError) or (
+                    exc.strerror and "UNEXPECTED_EOF_WHILE_READING" in exc.strerror
                 ):
                     if self.standard_compatible:
                         raise BrokenResourceError from exc

@@ -11,7 +11,9 @@ from typing import (
     Callable,
     cast,
     Iterator,
+    Literal,
     Optional,
+    overload,
     TYPE_CHECKING,
     Union,
 )
@@ -122,6 +124,48 @@ class GenericPackageManager(RESTManager):
         attrs.update(server_data)
         return self._obj_cls(self, attrs=attrs)
 
+    @overload
+    def download(
+        self,
+        package_name: str,
+        package_version: str,
+        file_name: str,
+        streamed: Literal[False] = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> bytes: ...
+
+    @overload
+    def download(
+        self,
+        package_name: str,
+        package_version: str,
+        file_name: str,
+        streamed: bool = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[True] = True,
+        **kwargs: Any,
+    ) -> Iterator[Any]: ...
+
+    @overload
+    def download(
+        self,
+        package_name: str,
+        package_version: str,
+        file_name: str,
+        streamed: Literal[True] = True,
+        action: Optional[Callable[[bytes], Any]] = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> None: ...
+
     @cli.register_custom_action(
         cls_names="GenericPackageManager",
         required=("package_name", "package_version", "file_name"),
@@ -133,7 +177,7 @@ class GenericPackageManager(RESTManager):
         package_version: str,
         file_name: str,
         streamed: bool = False,
-        action: Optional[Callable[[bytes], None]] = None,
+        action: Optional[Callable[[bytes], Any]] = None,
         chunk_size: int = 1024,
         *,
         iterator: bool = False,

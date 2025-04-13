@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from copy import copy
+from decimal import Decimal
 from functools import lru_cache, partial
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Any
 
-from pydantic_core import CoreSchema, PydanticCustomError, to_jsonable_python
+from pydantic_core import CoreSchema, PydanticCustomError, ValidationError, to_jsonable_python
 from pydantic_core import core_schema as cs
 
 from ._fields import PydanticMetadata
+from ._import_utils import import_cached_field_info
 
 if TYPE_CHECKING:
-    from ..annotated_handlers import GetJsonSchemaHandler
+    pass
 
 STRICT = {'strict'}
 FAIL_FAST = {'fail_fast'}
@@ -49,6 +52,7 @@ TIMEDELTA_CONSTRAINTS = {*NUMERIC_CONSTRAINTS, *STRICT}
 TIME_CONSTRAINTS = {*NUMERIC_CONSTRAINTS, *STRICT}
 LAX_OR_STRICT_CONSTRAINTS = STRICT
 ENUM_CONSTRAINTS = STRICT
+COMPLEX_CONSTRAINTS = STRICT
 
 UNION_CONSTRAINTS = {'union_mode'}
 URL_CONSTRAINTS = {
@@ -76,9 +80,7 @@ constraint_schema_pairings: list[tuple[set[str], tuple[str, ...]]] = [
     (GENERATOR_CONSTRAINTS, ('generator',)),
     (FLOAT_CONSTRAINTS, ('float',)),
     (INT_CONSTRAINTS, ('int',)),
-    (DATE_TIME_CONSTRAINTS, ('date', 'time', 'datetime')),
-    (TIMEDELTA_CONSTRAINTS, ('timedelta',)),
-    (TIME_CONSTRAINTS, ('time',)),
+    (DATE_TIME_CONSTRAINTS, ('date', 'time', 'datetime', 'timedelta')),
     # TODO: this is a bit redundant, we could probably avoid some of these
     (STRICT, (*TEXT_SCHEMA_TYPES, *SEQUENCE_SCHEMA_TYPES, *NUMERIC_SCHEMA_TYPES, 'typed-dict', 'model')),
     (UNION_CONSTRAINTS, ('union',)),
@@ -88,27 +90,12 @@ constraint_schema_pairings: list[tuple[set[str], tuple[str, ...]]] = [
     (LAX_OR_STRICT_CONSTRAINTS, ('lax-or-strict',)),
     (ENUM_CONSTRAINTS, ('enum',)),
     (DECIMAL_CONSTRAINTS, ('decimal',)),
+    (COMPLEX_CONSTRAINTS, ('complex',)),
 ]
 
 for constraints, schemas in constraint_schema_pairings:
     for c in constraints:
         CONSTRAINTS_TO_ALLOWED_SCHEMAS[c].update(schemas)
-
-
-def add_js_update_schema(s: cs.CoreSchema, f: Callable[[], dict[str, Any]]) -> None:
-    def update_js_schema(s: cs.CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, Any]:
-        js_schema = handler(s)
-        js_schema.update(f())
-        return js_schema
-
-    if 'metadata' in s:
-        metadata = s['metadata']
-        if 'pydantic_js_functions' in s:
-            metadata['pydantic_js_functions'].append(update_js_schema)
-        else:
-            metadata['pydantic_js_functions'] = [update_js_schema]
-    else:
-        s['metadata'] = {'pydantic_js_functions': [update_js_schema]}
 
 
 def as_jsonable_value(v: Any) -> Any:
@@ -127,7 +114,7 @@ def expand_grouped_metadata(annotations: Iterable[Any]) -> Iterable[Any]:
         An iterable of expanded annotations.
 
     Example:
-        ```py
+        ```python
         from annotated_types import Ge, Len
 
         from pydantic._internal._known_annotated_metadata import expand_grouped_metadata
@@ -138,7 +125,7 @@ def expand_grouped_metadata(annotations: Iterable[Any]) -> Iterable[Any]:
     """
     import annotated_types as at
 
-    from pydantic.fields import FieldInfo  # circular import
+    FieldInfo = import_cached_field_info()
 
     for annotation in annotations:
         if isinstance(annotation, at.GroupedMetadata):
@@ -200,7 +187,7 @@ def apply_known_metadata(annotation: Any, schema: CoreSchema) -> CoreSchema | No
     """
     import annotated_types as at
 
-    from ._validators import forbid_inf_nan_check, get_constraint_validator
+    from ._validators import NUMERIC_VALIDATOR_LOOKUP, forbid_inf_nan_check
 
     schema = schema.copy()
     schema_update, other_metadata = collect_known_metadata([annotation])
@@ -225,22 +212,48 @@ def apply_known_metadata(annotation: Any, schema: CoreSchema) -> CoreSchema | No
         # this is a bit challenging because we sometimes want to apply constraints to the inner schema,
         # whereas other times we want to wrap the existing schema with a new one that enforces a new constraint.
         if schema_type in {'function-before', 'function-wrap', 'function-after'} and constraint == 'strict':
-            schema['schema'] = apply_known_metadata(annotation, schema['schema'])  # type: ignore  # schema is function-after schema
+            schema['schema'] = apply_known_metadata(annotation, schema['schema'])  # type: ignore  # schema is function schema
             return schema
 
+        # if we're allowed to apply constraint directly to the schema, like le to int, do that
         if schema_type in allowed_schemas:
             if constraint == 'union_mode' and schema_type == 'union':
                 schema['mode'] = value  # type: ignore  # schema is UnionSchema
             else:
-                schema[constraint] = value
+                if schema_type == 'decimal' and constraint in {'multiple_of', 'le', 'ge', 'lt', 'gt'}:
+                    schema[constraint] = Decimal(value)
+                else:
+                    schema[constraint] = value
             continue
 
+        #  else, apply a function after validator to the schema to enforce the corresponding constraint
         if constraint in chain_schema_constraints:
-            chain_schema_steps.append(cs.str_schema(**{constraint: value}))
-        elif constraint in {*NUMERIC_CONSTRAINTS, *LENGTH_CONSTRAINTS}:
-            if constraint in NUMERIC_CONSTRAINTS:
-                json_schema_constraint = constraint
-            elif constraint in LENGTH_CONSTRAINTS:
+
+            def _apply_constraint_with_incompatibility_info(
+                value: Any, handler: cs.ValidatorFunctionWrapHandler
+            ) -> Any:
+                try:
+                    x = handler(value)
+                except ValidationError as ve:
+                    # if the error is about the type, it's likely that the constraint is incompatible the type of the field
+                    # for example, the following invalid schema wouldn't be caught during schema build, but rather at this point
+                    # with a cryptic 'string_type' error coming from the string validator,
+                    # that we'd rather express as a constraint incompatibility error (TypeError)
+                    # Annotated[list[int], Field(pattern='abc')]
+                    if 'type' in ve.errors()[0]['type']:
+                        raise TypeError(
+                            f"Unable to apply constraint '{constraint}' to supplied value {value} for schema of type '{schema_type}'"  # noqa: B023
+                        )
+                    raise ve
+                return x
+
+            chain_schema_steps.append(
+                cs.no_info_wrap_validator_function(
+                    _apply_constraint_with_incompatibility_info, cs.str_schema(**{constraint: value})
+                )
+            )
+        elif constraint in NUMERIC_VALIDATOR_LOOKUP:
+            if constraint in LENGTH_CONSTRAINTS:
                 inner_schema = schema
                 while inner_schema['type'] in {'function-before', 'function-wrap', 'function-after'}:
                     inner_schema = inner_schema['schema']  # type: ignore
@@ -248,39 +261,64 @@ def apply_known_metadata(annotation: Any, schema: CoreSchema) -> CoreSchema | No
                 if inner_schema_type == 'list' or (
                     inner_schema_type == 'json-or-python' and inner_schema['json_schema']['type'] == 'list'  # type: ignore
                 ):
-                    json_schema_constraint = 'minItems' if constraint == 'min_length' else 'maxItems'
+                    js_constraint_key = 'minItems' if constraint == 'min_length' else 'maxItems'
                 else:
-                    json_schema_constraint = 'minLength' if constraint == 'min_length' else 'maxLength'
+                    js_constraint_key = 'minLength' if constraint == 'min_length' else 'maxLength'
+            else:
+                js_constraint_key = constraint
 
             schema = cs.no_info_after_validator_function(
-                partial(get_constraint_validator(constraint), **{constraint: value}), schema
+                partial(NUMERIC_VALIDATOR_LOOKUP[constraint], **{constraint: value}), schema
             )
-            add_js_update_schema(schema, lambda: {json_schema_constraint: as_jsonable_value(value)})
+            metadata = schema.get('metadata', {})
+            if (existing_json_schema_updates := metadata.get('pydantic_js_updates')) is not None:
+                metadata['pydantic_js_updates'] = {
+                    **existing_json_schema_updates,
+                    **{js_constraint_key: as_jsonable_value(value)},
+                }
+            else:
+                metadata['pydantic_js_updates'] = {js_constraint_key: as_jsonable_value(value)}
+            schema['metadata'] = metadata
         elif constraint == 'allow_inf_nan' and value is False:
             schema = cs.no_info_after_validator_function(
                 forbid_inf_nan_check,
                 schema,
             )
         else:
-            raise RuntimeError(f'Unable to apply constraint {constraint} to schema {schema_type}')
+            # It's rare that we'd get here, but it's possible if we add a new constraint and forget to handle it
+            # Most constraint errors are caught at runtime during attempted application
+            raise RuntimeError(f"Unable to apply constraint '{constraint}' to schema of type '{schema_type}'")
 
     for annotation in other_metadata:
         if (annotation_type := type(annotation)) in (at_to_constraint_map := _get_at_to_constraint_map()):
             constraint = at_to_constraint_map[annotation_type]
+            validator = NUMERIC_VALIDATOR_LOOKUP.get(constraint)
+            if validator is None:
+                raise ValueError(f'Unknown constraint {constraint}')
             schema = cs.no_info_after_validator_function(
-                partial(get_constraint_validator(constraint), {constraint: getattr(annotation, constraint)}), schema
+                partial(validator, {constraint: getattr(annotation, constraint)}), schema
             )
             continue
-        elif isinstance(annotation, at.Predicate):
-            predicate_name = f'{annotation.func.__qualname__} ' if hasattr(annotation.func, '__qualname__') else ''
+        elif isinstance(annotation, (at.Predicate, at.Not)):
+            predicate_name = f'{annotation.func.__qualname__}' if hasattr(annotation.func, '__qualname__') else ''
 
             def val_func(v: Any) -> Any:
+                predicate_satisfied = annotation.func(v)  # noqa: B023
+
                 # annotation.func may also raise an exception, let it pass through
-                if not annotation.func(v):
-                    raise PydanticCustomError(
-                        'predicate_failed',
-                        f'Predicate {predicate_name}failed',  # type: ignore
-                    )
+                if isinstance(annotation, at.Predicate):  # noqa: B023
+                    if not predicate_satisfied:
+                        raise PydanticCustomError(
+                            'predicate_failed',
+                            f'Predicate {predicate_name} failed',  # type: ignore  # noqa: B023
+                        )
+                else:
+                    if predicate_satisfied:
+                        raise PydanticCustomError(
+                            'not_operation_failed',
+                            f'Not of {predicate_name} failed',  # type: ignore  # noqa: B023
+                        )
+
                 return v
 
             schema = cs.no_info_after_validator_function(val_func, schema)
@@ -305,7 +343,7 @@ def collect_known_metadata(annotations: Iterable[Any]) -> tuple[dict[str, Any], 
         A tuple contains a dict of known metadata and a list of unknown annotations.
 
     Example:
-        ```py
+        ```python
         from annotated_types import Gt, Len
 
         from pydantic._internal._known_annotated_metadata import collect_known_metadata

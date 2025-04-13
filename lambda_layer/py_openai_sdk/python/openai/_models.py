@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import inspect
-from typing import TYPE_CHECKING, Any, Type, Union, Generic, TypeVar, Callable, cast
+from typing import TYPE_CHECKING, Any, Type, Tuple, Union, Generic, TypeVar, Callable, Optional, cast
 from datetime import date, datetime
 from typing_extensions import (
     Unpack,
@@ -10,6 +10,7 @@ from typing_extensions import (
     ClassVar,
     Protocol,
     Required,
+    Sequence,
     ParamSpec,
     TypedDict,
     TypeGuard,
@@ -37,6 +38,7 @@ from ._utils import (
     PropertyInfo,
     is_list,
     is_given,
+    json_safe,
     lru_cache,
     is_mapping,
     parse_date,
@@ -45,6 +47,7 @@ from ._utils import (
     strip_not_given,
     extract_type_arg,
     is_annotated_type,
+    is_type_alias_type,
     strip_annotated_type,
 )
 from ._compat import (
@@ -63,7 +66,7 @@ from ._compat import (
 from ._constants import RAW_RESPONSE_HEADER
 
 if TYPE_CHECKING:
-    from pydantic_core.core_schema import ModelField, LiteralSchema, ModelFieldsSchema
+    from pydantic_core.core_schema import ModelField, ModelSchema, LiteralSchema, ModelFieldsSchema
 
 __all__ = ["BaseModel", "GenericModel"]
 
@@ -71,6 +74,8 @@ _T = TypeVar("_T")
 _BaseModelT = TypeVar("_BaseModelT", bound="BaseModel")
 
 P = ParamSpec("P")
+
+ReprArgs = Sequence[Tuple[Optional[str], Any]]
 
 
 @runtime_checkable
@@ -93,6 +98,28 @@ class BaseModel(pydantic.BaseModel):
 
         class Config(pydantic.BaseConfig):  # pyright: ignore[reportDeprecated]
             extra: Any = pydantic.Extra.allow  # type: ignore
+
+        @override
+        def __repr_args__(self) -> ReprArgs:
+            # we don't want these attributes to be included when something like `rich.print` is used
+            return [arg for arg in super().__repr_args__() if arg[0] not in {"_request_id", "__exclude_fields__"}]
+
+    if TYPE_CHECKING:
+        _request_id: Optional[str] = None
+        """The ID of the request, returned via the X-Request-ID header. Useful for debugging requests and reporting issues to OpenAI.
+
+        This will **only** be set for the top-level response object, it will not be defined for nested objects. For example:
+        
+        ```py
+        completion = await client.chat.completions.create(...)
+        completion._request_id  # req_id_xxx
+        completion.usage._request_id  # raises `AttributeError`
+        ```
+
+        Note: unlike other properties that use an `_` prefix, this property
+        *is* public. Unless documented otherwise, all other `_` prefix properties,
+        methods and modules are *private*.
+        """
 
     def to_dict(
         self,
@@ -170,21 +197,21 @@ class BaseModel(pydantic.BaseModel):
     @override
     def __str__(self) -> str:
         # mypy complains about an invalid self arg
-        return f'{self.__repr_name__()}({self.__repr_str__(", ")})'  # type: ignore[misc]
+        return f"{self.__repr_name__()}({self.__repr_str__(', ')})"  # type: ignore[misc]
 
     # Override the 'construct' method in a way that supports recursive parsing without validation.
     # Based on https://github.com/samuelcolvin/pydantic/issues/1168#issuecomment-817742836.
     @classmethod
     @override
-    def construct(
-        cls: Type[ModelT],
+    def construct(  # pyright: ignore[reportIncompatibleMethodOverride]
+        __cls: Type[ModelT],
         _fields_set: set[str] | None = None,
         **values: object,
     ) -> ModelT:
-        m = cls.__new__(cls)
+        m = __cls.__new__(__cls)
         fields_values: dict[str, object] = {}
 
-        config = get_model_config(cls)
+        config = get_model_config(__cls)
         populate_by_name = (
             config.allow_population_by_field_name
             if isinstance(config, _ConfigProtocol)
@@ -194,7 +221,7 @@ class BaseModel(pydantic.BaseModel):
         if _fields_set is None:
             _fields_set = set()
 
-        model_fields = get_model_fields(cls)
+        model_fields = get_model_fields(__cls)
         for name, field in model_fields.items():
             key = field.alias
             if key is None or (key not in values and populate_by_name):
@@ -248,8 +275,8 @@ class BaseModel(pydantic.BaseModel):
             self,
             *,
             mode: Literal["json", "python"] | str = "python",
-            include: IncEx = None,
-            exclude: IncEx = None,
+            include: IncEx | None = None,
+            exclude: IncEx | None = None,
             by_alias: bool = False,
             exclude_unset: bool = False,
             exclude_defaults: bool = False,
@@ -279,8 +306,8 @@ class BaseModel(pydantic.BaseModel):
             Returns:
                 A dictionary representation of the model.
             """
-            if mode != "python":
-                raise ValueError("mode is only supported in Pydantic v2")
+            if mode not in {"json", "python"}:
+                raise ValueError("mode must be either 'json' or 'python'")
             if round_trip != False:
                 raise ValueError("round_trip is only supported in Pydantic v2")
             if warnings != True:
@@ -289,7 +316,7 @@ class BaseModel(pydantic.BaseModel):
                 raise ValueError("context is only supported in Pydantic v2")
             if serialize_as_any != False:
                 raise ValueError("serialize_as_any is only supported in Pydantic v2")
-            return super().dict(  # pyright: ignore[reportDeprecated]
+            dumped = super().dict(  # pyright: ignore[reportDeprecated]
                 include=include,
                 exclude=exclude,
                 by_alias=by_alias,
@@ -298,13 +325,15 @@ class BaseModel(pydantic.BaseModel):
                 exclude_none=exclude_none,
             )
 
+            return cast(dict[str, Any], json_safe(dumped)) if mode == "json" else dumped
+
         @override
         def model_dump_json(
             self,
             *,
             indent: int | None = None,
-            include: IncEx = None,
-            exclude: IncEx = None,
+            include: IncEx | None = None,
+            exclude: IncEx | None = None,
             by_alias: bool = False,
             exclude_unset: bool = False,
             exclude_defaults: bool = False,
@@ -380,6 +409,8 @@ def is_basemodel(type_: type) -> bool:
 
 def is_basemodel_type(type_: type) -> TypeGuard[type[BaseModel] | type[GenericModel]]:
     origin = get_origin(type_) or type_
+    if not inspect.isclass(origin):
+        return False
     return issubclass(origin, BaseModel) or issubclass(origin, GenericModel)
 
 
@@ -406,14 +437,31 @@ def build(
     return cast(_BaseModelT, construct_type(type_=base_model_cls, value=kwargs))
 
 
+def construct_type_unchecked(*, value: object, type_: type[_T]) -> _T:
+    """Loose coercion to the expected type with construction of nested values.
+
+    Note: the returned value from this function is not guaranteed to match the
+    given type.
+    """
+    return cast(_T, construct_type(value=value, type_=type_))
+
+
 def construct_type(*, value: object, type_: object) -> object:
     """Loose coercion to the expected type with construction of nested values.
 
     If the given value does not match the expected type then it is returned as-is.
     """
+
+    # store a reference to the original type we were given before we extract any inner
+    # types so that we can properly resolve forward references in `TypeAliasType` annotations
+    original_type = None
+
     # we allow `object` as the input type because otherwise, passing things like
     # `Literal['value']` will be reported as a type error by type checkers
     type_ = cast("type[object]", type_)
+    if is_type_alias_type(type_):
+        original_type = type_  # type: ignore[unreachable]
+        type_ = type_.__value__  # type: ignore[unreachable]
 
     # unwrap `Annotated[T, ...]` -> `T`
     if is_annotated_type(type_):
@@ -429,7 +477,7 @@ def construct_type(*, value: object, type_: object) -> object:
 
     if is_union(origin):
         try:
-            return validate_type(type_=cast("type[object]", type_), value=value)
+            return validate_type(type_=cast("type[object]", original_type or type_), value=value)
         except Exception:
             pass
 
@@ -471,7 +519,11 @@ def construct_type(*, value: object, type_: object) -> object:
         _, items_type = get_args(type_)  # Dict[_, items_type]
         return {key: construct_type(value=item, type_=items_type) for key, item in value.items()}
 
-    if not is_literal_type(type_) and (issubclass(origin, BaseModel) or issubclass(origin, GenericModel)):
+    if (
+        not is_literal_type(type_)
+        and inspect.isclass(origin)
+        and (issubclass(origin, BaseModel) or issubclass(origin, GenericModel))
+    ):
         if is_list(value):
             return [cast(Any, type_).construct(**entry) if is_mapping(entry) else entry for entry in value]
 
@@ -619,15 +671,18 @@ def _build_discriminated_union_meta(*, union: type, meta_annotations: tuple[Any,
 
 def _extract_field_schema_pv2(model: type[BaseModel], field_name: str) -> ModelField | None:
     schema = model.__pydantic_core_schema__
+    if schema["type"] == "definitions":
+        schema = schema["schema"]
+
     if schema["type"] != "model":
         return None
 
+    schema = cast("ModelSchema", schema)
     fields_schema = schema["schema"]
     if fields_schema["type"] != "model-fields":
         return None
 
     fields_schema = cast("ModelFieldsSchema", fields_schema)
-
     field = fields_schema["fields"].get(field_name)
     if not field:
         return None
@@ -651,7 +706,22 @@ def set_pydantic_config(typ: Any, config: pydantic.ConfigDict) -> None:
     setattr(typ, "__pydantic_config__", config)  # noqa: B010
 
 
-# our use of subclasssing here causes weirdness for type checkers,
+def add_request_id(obj: BaseModel, request_id: str | None) -> None:
+    obj._request_id = request_id
+
+    # in Pydantic v1, using setattr like we do above causes the attribute
+    # to be included when serializing the model which we don't want in this
+    # case so we need to explicitly exclude it
+    if not PYDANTIC_V2:
+        try:
+            exclude_fields = obj.__exclude_fields__  # type: ignore
+        except AttributeError:
+            cast(Any, obj).__exclude_fields__ = {"_request_id", "__exclude_fields__"}
+        else:
+            cast(Any, obj).__exclude_fields__ = {*(exclude_fields or {}), "_request_id", "__exclude_fields__"}
+
+
+# our use of subclassing here causes weirdness for type checkers,
 # so we just pretend that we don't subclass
 if TYPE_CHECKING:
     GenericModel = BaseModel

@@ -6,7 +6,9 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Literal,
     Optional,
+    overload,
     Tuple,
     Type,
     TYPE_CHECKING,
@@ -612,12 +614,45 @@ class DownloadMixin(_RestObjectBase):
     _updated_attrs: Dict[str, Any]
     manager: base.RESTManager
 
+    @overload
+    def download(
+        self,
+        streamed: Literal[False] = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> bytes: ...
+
+    @overload
+    def download(
+        self,
+        streamed: bool = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[True] = True,
+        **kwargs: Any,
+    ) -> Iterator[Any]: ...
+
+    @overload
+    def download(
+        self,
+        streamed: Literal[True] = True,
+        action: Optional[Callable[[bytes], Any]] = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> None: ...
+
     @cli.register_custom_action(cls_names=("GroupExport", "ProjectExport"))
     @exc.on_http_error(exc.GitlabGetError)
     def download(
         self,
         streamed: bool = False,
-        action: Optional[Callable[[bytes], None]] = None,
+        action: Optional[Callable[[bytes], Any]] = None,
         chunk_size: int = 1024,
         *,
         iterator: bool = False,
@@ -663,6 +698,14 @@ class RotateMixin(_RestManagerBase):
     _path: Optional[str]
     gitlab: gitlab.Gitlab
 
+    @cli.register_custom_action(
+        cls_names=(
+            "PersonalAccessTokenManager",
+            "GroupAccessTokenManager",
+            "ProjectAccessTokenManager",
+        ),
+        optional=("expires_at",),
+    )
     @exc.on_http_error(exc.GitlabRotateError)
     def rotate(
         self, id: Union[str, int], expires_at: Optional[str] = None, **kwargs: Any
@@ -696,7 +739,12 @@ class ObjectRotateMixin(_RestObjectBase):
     _updated_attrs: Dict[str, Any]
     manager: base.RESTManager
 
-    def rotate(self, **kwargs: Any) -> None:
+    @cli.register_custom_action(
+        cls_names=("PersonalAccessToken", "GroupAccessToken", "ProjectAccessToken"),
+        optional=("expires_at",),
+    )
+    @exc.on_http_error(exc.GitlabRotateError)
+    def rotate(self, **kwargs: Any) -> Dict[str, Any]:
         """Rotate the current access token object.
 
         Args:
@@ -711,6 +759,7 @@ class ObjectRotateMixin(_RestObjectBase):
             assert self.encoded_id is not None
         server_data = self.manager.rotate(self.encoded_id, **kwargs)
         self._update_attrs(server_data)
+        return server_data
 
 
 class SubscribableMixin(_RestObjectBase):

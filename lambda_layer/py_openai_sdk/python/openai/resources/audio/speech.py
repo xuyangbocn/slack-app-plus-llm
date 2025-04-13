@@ -22,9 +22,8 @@ from ..._response import (
     async_to_custom_streamed_response_wrapper,
 )
 from ...types.audio import speech_create_params
-from ..._base_client import (
-    make_request_options,
-)
+from ..._base_client import make_request_options
+from ...types.audio.speech_model import SpeechModel
 
 __all__ = ["Speech", "AsyncSpeech"]
 
@@ -32,18 +31,32 @@ __all__ = ["Speech", "AsyncSpeech"]
 class Speech(SyncAPIResource):
     @cached_property
     def with_raw_response(self) -> SpeechWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return SpeechWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> SpeechWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return SpeechWithStreamingResponse(self)
 
     def create(
         self,
         *,
         input: str,
-        model: Union[str, Literal["tts-1", "tts-1-hd"]],
-        voice: Literal["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+        model: Union[str, SpeechModel],
+        voice: Union[
+            str, Literal["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse"]
+        ],
+        instructions: str | NotGiven = NOT_GIVEN,
         response_format: Literal["mp3", "opus", "aac", "flac", "wav", "pcm"] | NotGiven = NOT_GIVEN,
         speed: float | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
@@ -60,13 +73,16 @@ class Speech(SyncAPIResource):
           input: The text to generate audio for. The maximum length is 4096 characters.
 
           model:
-              One of the available [TTS models](https://platform.openai.com/docs/models/tts):
-              `tts-1` or `tts-1-hd`
+              One of the available [TTS models](https://platform.openai.com/docs/models#tts):
+              `tts-1`, `tts-1-hd` or `gpt-4o-mini-tts`.
 
-          voice: The voice to use when generating the audio. Supported voices are `alloy`,
-              `echo`, `fable`, `onyx`, `nova`, and `shimmer`. Previews of the voices are
-              available in the
-              [Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech/voice-options).
+          voice: The voice to use when generating the audio. Supported voices are `alloy`, `ash`,
+              `ballad`, `coral`, `echo`, `fable`, `onyx`, `nova`, `sage`, `shimmer`, and
+              `verse`. Previews of the voices are available in the
+              [Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech#voice-options).
+
+          instructions: Control the voice of your generated audio with additional instructions. Does not
+              work with `tts-1` or `tts-1-hd`.
 
           response_format: The format to audio in. Supported formats are `mp3`, `opus`, `aac`, `flac`,
               `wav`, and `pcm`.
@@ -90,6 +106,7 @@ class Speech(SyncAPIResource):
                     "input": input,
                     "model": model,
                     "voice": voice,
+                    "instructions": instructions,
                     "response_format": response_format,
                     "speed": speed,
                 },
@@ -105,18 +122,32 @@ class Speech(SyncAPIResource):
 class AsyncSpeech(AsyncAPIResource):
     @cached_property
     def with_raw_response(self) -> AsyncSpeechWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return AsyncSpeechWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> AsyncSpeechWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return AsyncSpeechWithStreamingResponse(self)
 
     async def create(
         self,
         *,
         input: str,
-        model: Union[str, Literal["tts-1", "tts-1-hd"]],
-        voice: Literal["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+        model: Union[str, SpeechModel],
+        voice: Union[
+            str, Literal["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse"]
+        ],
+        instructions: str | NotGiven = NOT_GIVEN,
         response_format: Literal["mp3", "opus", "aac", "flac", "wav", "pcm"] | NotGiven = NOT_GIVEN,
         speed: float | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
@@ -133,13 +164,16 @@ class AsyncSpeech(AsyncAPIResource):
           input: The text to generate audio for. The maximum length is 4096 characters.
 
           model:
-              One of the available [TTS models](https://platform.openai.com/docs/models/tts):
-              `tts-1` or `tts-1-hd`
+              One of the available [TTS models](https://platform.openai.com/docs/models#tts):
+              `tts-1`, `tts-1-hd` or `gpt-4o-mini-tts`.
 
-          voice: The voice to use when generating the audio. Supported voices are `alloy`,
-              `echo`, `fable`, `onyx`, `nova`, and `shimmer`. Previews of the voices are
-              available in the
-              [Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech/voice-options).
+          voice: The voice to use when generating the audio. Supported voices are `alloy`, `ash`,
+              `ballad`, `coral`, `echo`, `fable`, `onyx`, `nova`, `sage`, `shimmer`, and
+              `verse`. Previews of the voices are available in the
+              [Text to speech guide](https://platform.openai.com/docs/guides/text-to-speech#voice-options).
+
+          instructions: Control the voice of your generated audio with additional instructions. Does not
+              work with `tts-1` or `tts-1-hd`.
 
           response_format: The format to audio in. Supported formats are `mp3`, `opus`, `aac`, `flac`,
               `wav`, and `pcm`.
@@ -163,6 +197,7 @@ class AsyncSpeech(AsyncAPIResource):
                     "input": input,
                     "model": model,
                     "voice": voice,
+                    "instructions": instructions,
                     "response_format": response_format,
                     "speed": speed,
                 },
