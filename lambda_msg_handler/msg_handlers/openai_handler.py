@@ -3,6 +3,7 @@ import logging
 import json
 
 from openai import OpenAI, AssistantEventHandler
+from minagent import Agent
 
 import boto3
 import botocore
@@ -10,7 +11,6 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from msg_handlers.llm_tools import tools
-from msg_handlers.llm_utils.agent import Agent
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
@@ -37,12 +37,15 @@ tool_functions = tools['tool_functions']
 # Initialize an LLM Agent
 agent = Agent(
     openai_client,
-    name='chatgpt_on_slack',
-    description="Chatgpt on slack",
+    name='OpenaiOnSlack',
+    description="OpenAI on Slack",
     model=openai_gpt_model,
-    sentences=[openai_asst_instructions],
+    instructions=[openai_asst_instructions],
     tools=tool_defs,
-    tool_functions=tool_functions
+    tool_functions=tool_functions,
+    # web_search_options={
+    #     'search_context_size': 'medium',
+    # }
 )
 
 # aws boto3

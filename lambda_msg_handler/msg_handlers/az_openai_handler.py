@@ -3,6 +3,7 @@ import logging
 import json
 
 from openai import AzureOpenAI, AssistantEventHandler
+from minagent import Agent
 
 import boto3
 import botocore
@@ -10,7 +11,6 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from msg_handlers.llm_tools import tools
-from msg_handlers.llm_utils.agent import Agent
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
@@ -46,10 +46,10 @@ agent = Agent(
     name='az_openai_on_slack',
     description='Azure OpenAI on slack',
     model=az_openai_deployment_name,
-    sentences=[az_openai_asst_instructions],
+    instructions=[az_openai_asst_instructions],
     tools=tool_defs,
     tool_functions=tool_functions,
-    az_data_source=az_data_source,
+    extra_body={'data_sources': [az_data_source]},
 )
 
 # aws boto3

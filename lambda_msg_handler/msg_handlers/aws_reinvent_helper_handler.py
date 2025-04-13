@@ -3,6 +3,7 @@ import logging
 import json
 
 from openai import OpenAI, AssistantEventHandler
+from minagent import Agent
 
 import boto3
 import botocore
@@ -10,7 +11,6 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
 from msg_handlers.llm_tools import tools
-from msg_handlers.llm_utils.agent import Agent
 from msg_handlers.slack_related.utils import extract_event_details, reply
 
 logger = logging.getLogger()
@@ -40,8 +40,8 @@ agent = Agent(
     name='chatgpt_on_slack',
     description="Chatgpt on slack",
     model=openai_gpt_model,
-    # sentences=[openai_asst_instructions],
-    sentences=[
+    # instructions=[openai_asst_instructions],
+    instructions=[
         "AWS Reinvent 2024 is a large conference event which will be hosted in Las vegas in Pacific Standard Time from 2nd to 6th of December in 2024.",
         "During the conference, thousands of varied types of sessions and activities are organized at various timing and various hotel venues in Las Vegas",
         "These sessions cover different topics, touch different level of technicality and target varied audiences.",
