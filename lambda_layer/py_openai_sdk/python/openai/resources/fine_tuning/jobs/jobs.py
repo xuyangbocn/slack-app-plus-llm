@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Union, Iterable, Optional
+from typing import Dict, Union, Iterable, Optional
 from typing_extensions import Literal
 
 import httpx
@@ -30,6 +30,7 @@ from ...._base_client import (
     make_request_options,
 )
 from ....types.fine_tuning import job_list_params, job_create_params, job_list_events_params
+from ....types.shared_params.metadata import Metadata
 from ....types.fine_tuning.fine_tuning_job import FineTuningJob
 from ....types.fine_tuning.fine_tuning_job_event import FineTuningJobEvent
 
@@ -43,19 +44,32 @@ class Jobs(SyncAPIResource):
 
     @cached_property
     def with_raw_response(self) -> JobsWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return JobsWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> JobsWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return JobsWithStreamingResponse(self)
 
     def create(
         self,
         *,
-        model: Union[str, Literal["babbage-002", "davinci-002", "gpt-3.5-turbo"]],
+        model: Union[str, Literal["babbage-002", "davinci-002", "gpt-3.5-turbo", "gpt-4o-mini"]],
         training_file: str,
         hyperparameters: job_create_params.Hyperparameters | NotGiven = NOT_GIVEN,
         integrations: Optional[Iterable[job_create_params.Integration]] | NotGiven = NOT_GIVEN,
+        metadata: Optional[Metadata] | NotGiven = NOT_GIVEN,
+        method: job_create_params.Method | NotGiven = NOT_GIVEN,
         seed: Optional[int] | NotGiven = NOT_GIVEN,
         suffix: Optional[str] | NotGiven = NOT_GIVEN,
         validation_file: Optional[str] | NotGiven = NOT_GIVEN,
@@ -77,7 +91,7 @@ class Jobs(SyncAPIResource):
 
         Args:
           model: The name of the model to fine-tune. You can select one of the
-              [supported models](https://platform.openai.com/docs/guides/fine-tuning/what-models-can-be-fine-tuned).
+              [supported models](https://platform.openai.com/docs/guides/fine-tuning#which-models-can-be-fine-tuned).
 
           training_file: The ID of an uploaded file that contains training data.
 
@@ -88,26 +102,38 @@ class Jobs(SyncAPIResource):
               your file with the purpose `fine-tune`.
 
               The contents of the file should differ depending on if the model uses the
-              [chat](https://platform.openai.com/docs/api-reference/fine-tuning/chat-input) or
+              [chat](https://platform.openai.com/docs/api-reference/fine-tuning/chat-input),
               [completions](https://platform.openai.com/docs/api-reference/fine-tuning/completions-input)
+              format, or if the fine-tuning method uses the
+              [preference](https://platform.openai.com/docs/api-reference/fine-tuning/preference-input)
               format.
 
               See the [fine-tuning guide](https://platform.openai.com/docs/guides/fine-tuning)
               for more details.
 
-          hyperparameters: The hyperparameters used for the fine-tuning job.
+          hyperparameters: The hyperparameters used for the fine-tuning job. This value is now deprecated
+              in favor of `method`, and should be passed in under the `method` parameter.
 
           integrations: A list of integrations to enable for your fine-tuning job.
+
+          metadata: Set of 16 key-value pairs that can be attached to an object. This can be useful
+              for storing additional information about the object in a structured format, and
+              querying for objects via API or the dashboard.
+
+              Keys are strings with a maximum length of 64 characters. Values are strings with
+              a maximum length of 512 characters.
+
+          method: The method used for fine-tuning.
 
           seed: The seed controls the reproducibility of the job. Passing in the same seed and
               job parameters should produce the same results, but may differ in rare cases. If
               a seed is not specified, one will be generated for you.
 
-          suffix: A string of up to 18 characters that will be added to your fine-tuned model
+          suffix: A string of up to 64 characters that will be added to your fine-tuned model
               name.
 
               For example, a `suffix` of "custom-model-name" would produce a model name like
-              `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.
+              `ft:gpt-4o-mini:openai:custom-model-name:7p4lURel`.
 
           validation_file: The ID of an uploaded file that contains validation data.
 
@@ -138,6 +164,8 @@ class Jobs(SyncAPIResource):
                     "training_file": training_file,
                     "hyperparameters": hyperparameters,
                     "integrations": integrations,
+                    "metadata": metadata,
+                    "method": method,
                     "seed": seed,
                     "suffix": suffix,
                     "validation_file": validation_file,
@@ -190,6 +218,7 @@ class Jobs(SyncAPIResource):
         *,
         after: str | NotGiven = NOT_GIVEN,
         limit: int | NotGiven = NOT_GIVEN,
+        metadata: Optional[Dict[str, str]] | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
         # The extra values given here take precedence over values defined on the client or passed to this method.
         extra_headers: Headers | None = None,
@@ -204,6 +233,9 @@ class Jobs(SyncAPIResource):
           after: Identifier for the last job from the previous pagination request.
 
           limit: Number of fine-tuning jobs to retrieve.
+
+          metadata: Optional metadata filter. To filter, use the syntax `metadata[k]=v`.
+              Alternatively, set `metadata=null` to indicate no metadata.
 
           extra_headers: Send extra headers
 
@@ -225,6 +257,7 @@ class Jobs(SyncAPIResource):
                     {
                         "after": after,
                         "limit": limit,
+                        "metadata": metadata,
                     },
                     job_list_params.JobListParams,
                 ),
@@ -323,19 +356,32 @@ class AsyncJobs(AsyncAPIResource):
 
     @cached_property
     def with_raw_response(self) -> AsyncJobsWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return AsyncJobsWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> AsyncJobsWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return AsyncJobsWithStreamingResponse(self)
 
     async def create(
         self,
         *,
-        model: Union[str, Literal["babbage-002", "davinci-002", "gpt-3.5-turbo"]],
+        model: Union[str, Literal["babbage-002", "davinci-002", "gpt-3.5-turbo", "gpt-4o-mini"]],
         training_file: str,
         hyperparameters: job_create_params.Hyperparameters | NotGiven = NOT_GIVEN,
         integrations: Optional[Iterable[job_create_params.Integration]] | NotGiven = NOT_GIVEN,
+        metadata: Optional[Metadata] | NotGiven = NOT_GIVEN,
+        method: job_create_params.Method | NotGiven = NOT_GIVEN,
         seed: Optional[int] | NotGiven = NOT_GIVEN,
         suffix: Optional[str] | NotGiven = NOT_GIVEN,
         validation_file: Optional[str] | NotGiven = NOT_GIVEN,
@@ -357,7 +403,7 @@ class AsyncJobs(AsyncAPIResource):
 
         Args:
           model: The name of the model to fine-tune. You can select one of the
-              [supported models](https://platform.openai.com/docs/guides/fine-tuning/what-models-can-be-fine-tuned).
+              [supported models](https://platform.openai.com/docs/guides/fine-tuning#which-models-can-be-fine-tuned).
 
           training_file: The ID of an uploaded file that contains training data.
 
@@ -368,26 +414,38 @@ class AsyncJobs(AsyncAPIResource):
               your file with the purpose `fine-tune`.
 
               The contents of the file should differ depending on if the model uses the
-              [chat](https://platform.openai.com/docs/api-reference/fine-tuning/chat-input) or
+              [chat](https://platform.openai.com/docs/api-reference/fine-tuning/chat-input),
               [completions](https://platform.openai.com/docs/api-reference/fine-tuning/completions-input)
+              format, or if the fine-tuning method uses the
+              [preference](https://platform.openai.com/docs/api-reference/fine-tuning/preference-input)
               format.
 
               See the [fine-tuning guide](https://platform.openai.com/docs/guides/fine-tuning)
               for more details.
 
-          hyperparameters: The hyperparameters used for the fine-tuning job.
+          hyperparameters: The hyperparameters used for the fine-tuning job. This value is now deprecated
+              in favor of `method`, and should be passed in under the `method` parameter.
 
           integrations: A list of integrations to enable for your fine-tuning job.
+
+          metadata: Set of 16 key-value pairs that can be attached to an object. This can be useful
+              for storing additional information about the object in a structured format, and
+              querying for objects via API or the dashboard.
+
+              Keys are strings with a maximum length of 64 characters. Values are strings with
+              a maximum length of 512 characters.
+
+          method: The method used for fine-tuning.
 
           seed: The seed controls the reproducibility of the job. Passing in the same seed and
               job parameters should produce the same results, but may differ in rare cases. If
               a seed is not specified, one will be generated for you.
 
-          suffix: A string of up to 18 characters that will be added to your fine-tuned model
+          suffix: A string of up to 64 characters that will be added to your fine-tuned model
               name.
 
               For example, a `suffix` of "custom-model-name" would produce a model name like
-              `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.
+              `ft:gpt-4o-mini:openai:custom-model-name:7p4lURel`.
 
           validation_file: The ID of an uploaded file that contains validation data.
 
@@ -418,6 +476,8 @@ class AsyncJobs(AsyncAPIResource):
                     "training_file": training_file,
                     "hyperparameters": hyperparameters,
                     "integrations": integrations,
+                    "metadata": metadata,
+                    "method": method,
                     "seed": seed,
                     "suffix": suffix,
                     "validation_file": validation_file,
@@ -470,6 +530,7 @@ class AsyncJobs(AsyncAPIResource):
         *,
         after: str | NotGiven = NOT_GIVEN,
         limit: int | NotGiven = NOT_GIVEN,
+        metadata: Optional[Dict[str, str]] | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
         # The extra values given here take precedence over values defined on the client or passed to this method.
         extra_headers: Headers | None = None,
@@ -484,6 +545,9 @@ class AsyncJobs(AsyncAPIResource):
           after: Identifier for the last job from the previous pagination request.
 
           limit: Number of fine-tuning jobs to retrieve.
+
+          metadata: Optional metadata filter. To filter, use the syntax `metadata[k]=v`.
+              Alternatively, set `metadata=null` to indicate no metadata.
 
           extra_headers: Send extra headers
 
@@ -505,6 +569,7 @@ class AsyncJobs(AsyncAPIResource):
                     {
                         "after": after,
                         "limit": limit,
+                        "metadata": metadata,
                     },
                     job_list_params.JobListParams,
                 ),

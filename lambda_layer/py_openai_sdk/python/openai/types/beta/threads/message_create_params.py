@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from typing import Union, Iterable, Optional
-from typing_extensions import Literal, Required, TypedDict
+from typing_extensions import Literal, Required, TypeAlias, TypedDict
 
+from ...shared_params.metadata import Metadata
 from .message_content_part_param import MessageContentPartParam
 from ..code_interpreter_tool_param import CodeInterpreterToolParam
 
@@ -27,12 +28,14 @@ class MessageCreateParams(TypedDict, total=False):
     attachments: Optional[Iterable[Attachment]]
     """A list of files attached to the message, and the tools they should be added to."""
 
-    metadata: Optional[object]
+    metadata: Optional[Metadata]
     """Set of 16 key-value pairs that can be attached to an object.
 
     This can be useful for storing additional information about the object in a
-    structured format. Keys can be a maximum of 64 characters long and values can be
-    a maxium of 512 characters long.
+    structured format, and querying for objects via API or the dashboard.
+
+    Keys are strings with a maximum length of 64 characters. Values are strings with
+    a maximum length of 512 characters.
     """
 
 
@@ -41,7 +44,7 @@ class AttachmentToolFileSearch(TypedDict, total=False):
     """The type of tool being defined: `file_search`"""
 
 
-AttachmentTool = Union[CodeInterpreterToolParam, AttachmentToolFileSearch]
+AttachmentTool: TypeAlias = Union[CodeInterpreterToolParam, AttachmentToolFileSearch]
 
 
 class Attachment(TypedDict, total=False):

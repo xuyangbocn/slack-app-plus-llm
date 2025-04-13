@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from typing import List, Union, Iterable, Optional
-from typing_extensions import Literal, Required, TypedDict
+from typing_extensions import Literal, Required, TypeAlias, TypedDict
 
+from ..shared.chat_model import ChatModel
 from .function_tool_param import FunctionToolParam
 from .file_search_tool_param import FileSearchToolParam
+from ..shared_params.metadata import Metadata
 from .code_interpreter_tool_param import CodeInterpreterToolParam
 from .assistant_tool_choice_option_param import AssistantToolChoiceOptionParam
 from .threads.message_content_part_param import MessageContentPartParam
@@ -69,42 +71,17 @@ class ThreadCreateAndRunParamsBase(TypedDict, total=False):
     `incomplete_details` for more info.
     """
 
-    metadata: Optional[object]
+    metadata: Optional[Metadata]
     """Set of 16 key-value pairs that can be attached to an object.
 
     This can be useful for storing additional information about the object in a
-    structured format. Keys can be a maximum of 64 characters long and values can be
-    a maxium of 512 characters long.
+    structured format, and querying for objects via API or the dashboard.
+
+    Keys are strings with a maximum length of 64 characters. Values are strings with
+    a maximum length of 512 characters.
     """
 
-    model: Union[
-        str,
-        Literal[
-            "gpt-4o",
-            "gpt-4o-2024-05-13",
-            "gpt-4o-mini",
-            "gpt-4o-mini-2024-07-18",
-            "gpt-4-turbo",
-            "gpt-4-turbo-2024-04-09",
-            "gpt-4-0125-preview",
-            "gpt-4-turbo-preview",
-            "gpt-4-1106-preview",
-            "gpt-4-vision-preview",
-            "gpt-4",
-            "gpt-4-0314",
-            "gpt-4-0613",
-            "gpt-4-32k",
-            "gpt-4-32k-0314",
-            "gpt-4-32k-0613",
-            "gpt-3.5-turbo",
-            "gpt-3.5-turbo-16k",
-            "gpt-3.5-turbo-0613",
-            "gpt-3.5-turbo-1106",
-            "gpt-3.5-turbo-0125",
-            "gpt-3.5-turbo-16k-0613",
-        ],
-        None,
-    ]
+    model: Union[str, ChatModel, None]
     """
     The ID of the [Model](https://platform.openai.com/docs/api-reference/models) to
     be used to execute this run. If a value is provided here, it will override the
@@ -115,18 +92,23 @@ class ThreadCreateAndRunParamsBase(TypedDict, total=False):
     parallel_tool_calls: bool
     """
     Whether to enable
-    [parallel function calling](https://platform.openai.com/docs/guides/function-calling/parallel-function-calling)
+    [parallel function calling](https://platform.openai.com/docs/guides/function-calling#configuring-parallel-function-calling)
     during tool use.
     """
 
     response_format: Optional[AssistantResponseFormatOptionParam]
     """Specifies the format that the model must output.
 
-    Compatible with [GPT-4o](https://platform.openai.com/docs/models/gpt-4o),
-    [GPT-4 Turbo](https://platform.openai.com/docs/models/gpt-4-turbo-and-gpt-4),
+    Compatible with [GPT-4o](https://platform.openai.com/docs/models#gpt-4o),
+    [GPT-4 Turbo](https://platform.openai.com/docs/models#gpt-4-turbo-and-gpt-4),
     and all GPT-3.5 Turbo models since `gpt-3.5-turbo-1106`.
 
-    Setting to `{ "type": "json_object" }` enables JSON mode, which guarantees the
+    Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured
+    Outputs which ensures the model will match your supplied JSON schema. Learn more
+    in the
+    [Structured Outputs guide](https://platform.openai.com/docs/guides/structured-outputs).
+
+    Setting to `{ "type": "json_object" }` enables JSON mode, which ensures the
     message the model generates is valid JSON.
 
     **Important:** when using JSON mode, you **must** also instruct the model to
@@ -146,7 +128,11 @@ class ThreadCreateAndRunParamsBase(TypedDict, total=False):
     """
 
     thread: Thread
-    """If no thread is provided, an empty thread will be created."""
+    """Options to create a new thread.
+
+    If no thread is provided when running a request, an empty thread will be
+    created.
+    """
 
     tool_choice: Optional[AssistantToolChoiceOptionParam]
     """
@@ -194,7 +180,7 @@ class ThreadMessageAttachmentToolFileSearch(TypedDict, total=False):
     """The type of tool being defined: `file_search`"""
 
 
-ThreadMessageAttachmentTool = Union[CodeInterpreterToolParam, ThreadMessageAttachmentToolFileSearch]
+ThreadMessageAttachmentTool: TypeAlias = Union[CodeInterpreterToolParam, ThreadMessageAttachmentToolFileSearch]
 
 
 class ThreadMessageAttachment(TypedDict, total=False):
@@ -221,12 +207,14 @@ class ThreadMessage(TypedDict, total=False):
     attachments: Optional[Iterable[ThreadMessageAttachment]]
     """A list of files attached to the message, and the tools they should be added to."""
 
-    metadata: Optional[object]
+    metadata: Optional[Metadata]
     """Set of 16 key-value pairs that can be attached to an object.
 
     This can be useful for storing additional information about the object in a
-    structured format. Keys can be a maximum of 64 characters long and values can be
-    a maxium of 512 characters long.
+    structured format, and querying for objects via API or the dashboard.
+
+    Keys are strings with a maximum length of 64 characters. Values are strings with
+    a maximum length of 512 characters.
     """
 
 
@@ -266,7 +254,7 @@ class ThreadToolResourcesFileSearchVectorStoreChunkingStrategyStatic(TypedDict, 
     """Always `static`."""
 
 
-ThreadToolResourcesFileSearchVectorStoreChunkingStrategy = Union[
+ThreadToolResourcesFileSearchVectorStoreChunkingStrategy: TypeAlias = Union[
     ThreadToolResourcesFileSearchVectorStoreChunkingStrategyAuto,
     ThreadToolResourcesFileSearchVectorStoreChunkingStrategyStatic,
 ]
@@ -286,12 +274,14 @@ class ThreadToolResourcesFileSearchVectorStore(TypedDict, total=False):
     store.
     """
 
-    metadata: object
-    """Set of 16 key-value pairs that can be attached to a vector store.
+    metadata: Optional[Metadata]
+    """Set of 16 key-value pairs that can be attached to an object.
 
-    This can be useful for storing additional information about the vector store in
-    a structured format. Keys can be a maximum of 64 characters long and values can
-    be a maxium of 512 characters long.
+    This can be useful for storing additional information about the object in a
+    structured format, and querying for objects via API or the dashboard.
+
+    Keys are strings with a maximum length of 64 characters. Values are strings with
+    a maximum length of 512 characters.
     """
 
 
@@ -326,12 +316,14 @@ class Thread(TypedDict, total=False):
     start the thread with.
     """
 
-    metadata: Optional[object]
+    metadata: Optional[Metadata]
     """Set of 16 key-value pairs that can be attached to an object.
 
     This can be useful for storing additional information about the object in a
-    structured format. Keys can be a maximum of 64 characters long and values can be
-    a maxium of 512 characters long.
+    structured format, and querying for objects via API or the dashboard.
+
+    Keys are strings with a maximum length of 64 characters. Values are strings with
+    a maximum length of 512 characters.
     """
 
     tool_resources: Optional[ThreadToolResources]
@@ -368,7 +360,7 @@ class ToolResources(TypedDict, total=False):
     file_search: ToolResourcesFileSearch
 
 
-Tool = Union[CodeInterpreterToolParam, FileSearchToolParam, FunctionToolParam]
+Tool: TypeAlias = Union[CodeInterpreterToolParam, FileSearchToolParam, FunctionToolParam]
 
 
 class TruncationStrategy(TypedDict, total=False):
@@ -388,7 +380,7 @@ class TruncationStrategy(TypedDict, total=False):
     """
 
 
-class ThreadCreateAndRunParamsNonStreaming(ThreadCreateAndRunParamsBase):
+class ThreadCreateAndRunParamsNonStreaming(ThreadCreateAndRunParamsBase, total=False):
     stream: Optional[Literal[False]]
     """
     If `true`, returns a stream of events that happen during the Run as server-sent

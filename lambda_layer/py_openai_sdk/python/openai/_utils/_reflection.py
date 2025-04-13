@@ -15,6 +15,7 @@ def assert_signatures_in_sync(
     check_func: Callable[..., Any],
     *,
     exclude_params: set[str] = set(),
+    description: str = "",
 ) -> None:
     """Ensure that the signature of the second function matches the first."""
 
@@ -34,9 +35,11 @@ def assert_signatures_in_sync(
 
         if custom_param.annotation != source_param.annotation:
             errors.append(
-                f"types for the `{name}` param are do not match; source={repr(source_param.annotation)} checking={repr(source_param.annotation)}"
+                f"types for the `{name}` param are do not match; source={repr(source_param.annotation)} checking={repr(custom_param.annotation)}"
             )
             continue
 
     if errors:
-        raise AssertionError(f"{len(errors)} errors encountered when comparing signatures:\n\n" + "\n\n".join(errors))
+        raise AssertionError(
+            f"{len(errors)} errors encountered when comparing signatures{description}:\n\n" + "\n\n".join(errors)
+        )

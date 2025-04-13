@@ -19,9 +19,8 @@ from .._utils import (
 from .._compat import cached_property
 from .._resource import SyncAPIResource, AsyncAPIResource
 from .._response import to_streamed_response_wrapper, async_to_streamed_response_wrapper
-from .._base_client import (
-    make_request_options,
-)
+from .._base_client import make_request_options
+from ..types.image_model import ImageModel
 from ..types.images_response import ImagesResponse
 
 __all__ = ["Images", "AsyncImages"]
@@ -30,17 +29,28 @@ __all__ = ["Images", "AsyncImages"]
 class Images(SyncAPIResource):
     @cached_property
     def with_raw_response(self) -> ImagesWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return ImagesWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> ImagesWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return ImagesWithStreamingResponse(self)
 
     def create_variation(
         self,
         *,
         image: FileTypes,
-        model: Union[str, Literal["dall-e-2"], None] | NotGiven = NOT_GIVEN,
+        model: Union[str, ImageModel, None] | NotGiven = NOT_GIVEN,
         n: Optional[int] | NotGiven = NOT_GIVEN,
         response_format: Optional[Literal["url", "b64_json"]] | NotGiven = NOT_GIVEN,
         size: Optional[Literal["256x256", "512x512", "1024x1024"]] | NotGiven = NOT_GIVEN,
@@ -74,7 +84,7 @@ class Images(SyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -115,7 +125,7 @@ class Images(SyncAPIResource):
         image: FileTypes,
         prompt: str,
         mask: FileTypes | NotGiven = NOT_GIVEN,
-        model: Union[str, Literal["dall-e-2"], None] | NotGiven = NOT_GIVEN,
+        model: Union[str, ImageModel, None] | NotGiven = NOT_GIVEN,
         n: Optional[int] | NotGiven = NOT_GIVEN,
         response_format: Optional[Literal["url", "b64_json"]] | NotGiven = NOT_GIVEN,
         size: Optional[Literal["256x256", "512x512", "1024x1024"]] | NotGiven = NOT_GIVEN,
@@ -155,7 +165,7 @@ class Images(SyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -196,7 +206,7 @@ class Images(SyncAPIResource):
         self,
         *,
         prompt: str,
-        model: Union[str, Literal["dall-e-2", "dall-e-3"], None] | NotGiven = NOT_GIVEN,
+        model: Union[str, ImageModel, None] | NotGiven = NOT_GIVEN,
         n: Optional[int] | NotGiven = NOT_GIVEN,
         quality: Literal["standard", "hd"] | NotGiven = NOT_GIVEN,
         response_format: Optional[Literal["url", "b64_json"]] | NotGiven = NOT_GIVEN,
@@ -241,7 +251,7 @@ class Images(SyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -276,17 +286,28 @@ class Images(SyncAPIResource):
 class AsyncImages(AsyncAPIResource):
     @cached_property
     def with_raw_response(self) -> AsyncImagesWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return AsyncImagesWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> AsyncImagesWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return AsyncImagesWithStreamingResponse(self)
 
     async def create_variation(
         self,
         *,
         image: FileTypes,
-        model: Union[str, Literal["dall-e-2"], None] | NotGiven = NOT_GIVEN,
+        model: Union[str, ImageModel, None] | NotGiven = NOT_GIVEN,
         n: Optional[int] | NotGiven = NOT_GIVEN,
         response_format: Optional[Literal["url", "b64_json"]] | NotGiven = NOT_GIVEN,
         size: Optional[Literal["256x256", "512x512", "1024x1024"]] | NotGiven = NOT_GIVEN,
@@ -320,7 +341,7 @@ class AsyncImages(AsyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -361,7 +382,7 @@ class AsyncImages(AsyncAPIResource):
         image: FileTypes,
         prompt: str,
         mask: FileTypes | NotGiven = NOT_GIVEN,
-        model: Union[str, Literal["dall-e-2"], None] | NotGiven = NOT_GIVEN,
+        model: Union[str, ImageModel, None] | NotGiven = NOT_GIVEN,
         n: Optional[int] | NotGiven = NOT_GIVEN,
         response_format: Optional[Literal["url", "b64_json"]] | NotGiven = NOT_GIVEN,
         size: Optional[Literal["256x256", "512x512", "1024x1024"]] | NotGiven = NOT_GIVEN,
@@ -401,7 +422,7 @@ class AsyncImages(AsyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 
@@ -442,7 +463,7 @@ class AsyncImages(AsyncAPIResource):
         self,
         *,
         prompt: str,
-        model: Union[str, Literal["dall-e-2", "dall-e-3"], None] | NotGiven = NOT_GIVEN,
+        model: Union[str, ImageModel, None] | NotGiven = NOT_GIVEN,
         n: Optional[int] | NotGiven = NOT_GIVEN,
         quality: Literal["standard", "hd"] | NotGiven = NOT_GIVEN,
         response_format: Optional[Literal["url", "b64_json"]] | NotGiven = NOT_GIVEN,
@@ -487,7 +508,7 @@ class AsyncImages(AsyncAPIResource):
 
           user: A unique identifier representing your end-user, which can help OpenAI to monitor
               and detect abuse.
-              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices/end-user-ids).
+              [Learn more](https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids).
 
           extra_headers: Send extra headers
 

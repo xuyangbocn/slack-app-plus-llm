@@ -2,9 +2,11 @@
 
 from __future__ import annotations as _annotations
 
+from pydantic_core import __version__ as __pydantic_core_version__
+
 __all__ = 'VERSION', 'version_info'
 
-VERSION = '2.8.2'
+VERSION = '2.11.3'
 """The version of Pydantic."""
 
 
@@ -63,16 +65,22 @@ def version_info() -> str:
     return '\n'.join('{:>30} {}'.format(k + ':', str(v).replace('\n', ' ')) for k, v in info.items())
 
 
-def parse_mypy_version(version: str) -> tuple[int, ...]:
-    """Parse mypy string version to tuple of ints.
+def check_pydantic_core_version() -> bool:
+    """Check that the installed `pydantic-core` dependency is compatible."""
+    # Keep this in sync with the version constraint in the `pyproject.toml` dependencies:
+    return __pydantic_core_version__ == '2.33.1'
 
-    It parses normal version like `0.930` and extra info followed by a `+` sign
-    like `0.940+dev.04cac4b5d911c4f9529e6ce86a27b44f28846f5d.dirty`.
+
+def parse_mypy_version(version: str) -> tuple[int, int, int]:
+    """Parse `mypy` string version to a 3-tuple of ints.
+
+    It parses normal version like `1.11.0` and extra info followed by a `+` sign
+    like `1.11.0+dev.d6d9d8cd4f27c52edac1f537e236ec48a01e54cb.dirty`.
 
     Args:
         version: The mypy version string.
 
     Returns:
-        A tuple of ints. e.g. (0, 930).
+        A triple of ints, e.g. `(1, 11, 0)`.
     """
-    return tuple(map(int, version.partition('+')[0].split('.')))
+    return tuple(map(int, version.partition('+')[0].split('.')))  # pyright: ignore[reportReturnType]

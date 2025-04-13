@@ -25,6 +25,8 @@ from ._types import (
 )
 from ._utils import peek_filelike_length, primitive_value_to_str
 
+__all__ = ["ByteStream"]
+
 
 class ByteStream(AsyncByteStream, SyncByteStream):
     def __init__(self, stream: bytes) -> None:
@@ -172,7 +174,9 @@ def encode_html(html: str) -> tuple[dict[str, str], ByteStream]:
 
 
 def encode_json(json: Any) -> tuple[dict[str, str], ByteStream]:
-    body = json_dumps(json).encode("utf-8")
+    body = json_dumps(
+        json, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
     content_length = str(len(body))
     content_type = "application/json"
     headers = {"Content-Length": content_length, "Content-Type": content_type}
@@ -199,7 +203,7 @@ def encode_request(
         # `data=<bytes...>` usages. We deal with that case here, treating it
         # as if `content=<...>` had been supplied instead.
         message = "Use 'content=<...>' to upload raw bytes/text content."
-        warnings.warn(message, DeprecationWarning)
+        warnings.warn(message, DeprecationWarning, stacklevel=2)
         return encode_content(data)
 
     if content is not None:

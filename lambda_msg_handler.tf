@@ -81,7 +81,7 @@ resource "aws_lambda_layer_version" "slack_sdk" {
   layer_name               = "py-slack-sdk"
   description              = "Include slack-sdk"
   compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.9", "python3.10", "python3.11", "python3.12"]
+  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
 
   filename         = data.archive_file.slack_sdk.output_path
   source_code_hash = data.archive_file.slack_sdk.output_base64sha256
@@ -98,7 +98,7 @@ resource "aws_lambda_layer_version" "openai_sdk" {
   layer_name               = "py-openai-sdk"
   description              = "Include openai-sdk"
   compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.9", "python3.10", "python3.11", "python3.12"]
+  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
 
   filename         = data.archive_file.openai_sdk.output_path
   source_code_hash = data.archive_file.openai_sdk.output_base64sha256
@@ -115,7 +115,7 @@ resource "aws_lambda_layer_version" "gitlab_sdk" {
   layer_name               = "py-gitlab-sdk"
   description              = "Include gitlab-sdk"
   compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.9", "python3.10", "python3.11", "python3.12"]
+  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
 
   filename         = data.archive_file.gitlab_sdk.output_path
   source_code_hash = data.archive_file.gitlab_sdk.output_base64sha256
@@ -132,7 +132,7 @@ resource "aws_lambda_layer_version" "jira_sdk" {
   layer_name               = "py-jira-sdk"
   description              = "Include jira-sdk"
   compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.9", "python3.10", "python3.11", "python3.12"]
+  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
 
   filename         = data.archive_file.jira_sdk.output_path
   source_code_hash = data.archive_file.jira_sdk.output_base64sha256

@@ -2,11 +2,13 @@ import base64
 from typing import (
     Any,
     Callable,
-    cast,
     Dict,
     Iterator,
     List,
+    Literal,
     Optional,
+    overload,
+    Tuple,
     TYPE_CHECKING,
     Union,
 )
@@ -20,7 +22,6 @@ from gitlab.base import RESTManager, RESTObject
 from gitlab.mixins import (
     CreateMixin,
     DeleteMixin,
-    GetMixin,
     ObjectDeleteMixin,
     SaveMixin,
     UpdateMixin,
@@ -52,7 +53,7 @@ class ProjectFile(SaveMixin, ObjectDeleteMixin, RESTObject):
 
     # NOTE(jlvillal): Signature doesn't match SaveMixin.save() so ignore
     # type error
-    def save(  # type: ignore
+    def save(  # type: ignore[override]
         self, branch: str, commit_message: str, **kwargs: Any
     ) -> None:
         """Save the changes made to the file to the server.
@@ -76,7 +77,7 @@ class ProjectFile(SaveMixin, ObjectDeleteMixin, RESTObject):
     @exc.on_http_error(exc.GitlabDeleteError)
     # NOTE(jlvillal): Signature doesn't match DeleteMixin.delete() so ignore
     # type error
-    def delete(  # type: ignore
+    def delete(  # type: ignore[override]
         self, branch: str, commit_message: str, **kwargs: Any
     ) -> None:
         """Delete the file from the server.
@@ -96,27 +97,38 @@ class ProjectFile(SaveMixin, ObjectDeleteMixin, RESTObject):
         self.manager.delete(file_path, branch, commit_message, **kwargs)
 
 
-class ProjectFileManager(GetMixin, CreateMixin, UpdateMixin, DeleteMixin, RESTManager):
+class ProjectFileManager(CreateMixin, UpdateMixin, DeleteMixin, RESTManager):
     _path = "/projects/{project_id}/repository/files"
     _obj_cls = ProjectFile
     _from_parent_attrs = {"project_id": "id"}
+    _optional_get_attrs: Tuple[str, ...] = ()
     _create_attrs = RequiredOptional(
         required=("file_path", "branch", "content", "commit_message"),
-        optional=("encoding", "author_email", "author_name"),
+        optional=(
+            "encoding",
+            "author_email",
+            "author_name",
+            "execute_filemode",
+            "start_branch",
+        ),
     )
     _update_attrs = RequiredOptional(
         required=("file_path", "branch", "content", "commit_message"),
-        optional=("encoding", "author_email", "author_name"),
+        optional=(
+            "encoding",
+            "author_email",
+            "author_name",
+            "execute_filemode",
+            "start_branch",
+            "last_commit_id",
+        ),
     )
 
     @cli.register_custom_action(
         cls_names="ProjectFileManager", required=("file_path", "ref")
     )
-    # NOTE(jlvillal): Signature doesn't match UpdateMixin.update() so ignore
-    # type error
-    def get(  # type: ignore
-        self, file_path: str, ref: str, **kwargs: Any
-    ) -> ProjectFile:
+    @exc.on_http_error(exc.GitlabGetError)
+    def get(self, file_path: str, ref: str, **kwargs: Any) -> ProjectFile:
         """Retrieve a single file.
 
         Args:
@@ -131,12 +143,49 @@ class ProjectFileManager(GetMixin, CreateMixin, UpdateMixin, DeleteMixin, RESTMa
         Returns:
             The generated RESTObject
         """
-        return cast(ProjectFile, GetMixin.get(self, file_path, ref=ref, **kwargs))
+        if TYPE_CHECKING:
+            assert file_path is not None
+        file_path = utils.EncodedId(file_path)
+        path = f"{self.path}/{file_path}"
+        server_data = self.gitlab.http_get(path, ref=ref, **kwargs)
+        if TYPE_CHECKING:
+            assert isinstance(server_data, dict)
+        return self._obj_cls(self, server_data)
+
+    @exc.on_http_error(exc.GitlabHeadError)
+    def head(
+        self, file_path: str, ref: str, **kwargs: Any
+    ) -> "requests.structures.CaseInsensitiveDict[Any]":
+        """Retrieve just metadata for a single file.
+
+        Args:
+            file_path: Path of the file to retrieve
+            ref: Name of the branch, tag or commit
+            **kwargs: Extra options to send to the server (e.g. sudo)
+
+        Raises:
+            GitlabAuthenticationError: If authentication is not correct
+            GitlabGetError: If the file could not be retrieved
+
+        Returns:
+            The response headers as a dictionary
+        """
+        if TYPE_CHECKING:
+            assert file_path is not None
+        file_path = utils.EncodedId(file_path)
+        path = f"{self.path}/{file_path}"
+        return self.gitlab.http_head(path, ref=ref, **kwargs)
 
     @cli.register_custom_action(
         cls_names="ProjectFileManager",
         required=("file_path", "branch", "content", "commit_message"),
-        optional=("encoding", "author_email", "author_name"),
+        optional=(
+            "encoding",
+            "author_email",
+            "author_name",
+            "execute_filemode",
+            "start_branch",
+        ),
     )
     @exc.on_http_error(exc.GitlabCreateError)
     def create(
@@ -172,7 +221,7 @@ class ProjectFileManager(GetMixin, CreateMixin, UpdateMixin, DeleteMixin, RESTMa
     @exc.on_http_error(exc.GitlabUpdateError)
     # NOTE(jlvillal): Signature doesn't match UpdateMixin.update() so ignore
     # type error
-    def update(  # type: ignore
+    def update(  # type: ignore[override]
         self, file_path: str, new_data: Optional[Dict[str, Any]] = None, **kwargs: Any
     ) -> Dict[str, Any]:
         """Update an object on the server.
@@ -207,7 +256,7 @@ class ProjectFileManager(GetMixin, CreateMixin, UpdateMixin, DeleteMixin, RESTMa
     @exc.on_http_error(exc.GitlabDeleteError)
     # NOTE(jlvillal): Signature doesn't match DeleteMixin.delete() so ignore
     # type error
-    def delete(  # type: ignore
+    def delete(  # type: ignore[override]
         self, file_path: str, branch: str, commit_message: str, **kwargs: Any
     ) -> None:
         """Delete a file on the server.
@@ -227,9 +276,49 @@ class ProjectFileManager(GetMixin, CreateMixin, UpdateMixin, DeleteMixin, RESTMa
         data = {"branch": branch, "commit_message": commit_message}
         self.gitlab.http_delete(path, query_data=data, **kwargs)
 
+    @overload
+    def raw(
+        self,
+        file_path: str,
+        ref: Optional[str] = None,
+        streamed: Literal[False] = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> bytes: ...
+
+    @overload
+    def raw(
+        self,
+        file_path: str,
+        ref: Optional[str] = None,
+        streamed: bool = False,
+        action: None = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[True] = True,
+        **kwargs: Any,
+    ) -> Iterator[Any]: ...
+
+    @overload
+    def raw(
+        self,
+        file_path: str,
+        ref: Optional[str] = None,
+        streamed: Literal[True] = True,
+        action: Optional[Callable[[bytes], Any]] = None,
+        chunk_size: int = 1024,
+        *,
+        iterator: Literal[False] = False,
+        **kwargs: Any,
+    ) -> None: ...
+
     @cli.register_custom_action(
         cls_names="ProjectFileManager",
         required=("file_path",),
+        optional=("ref",),
     )
     @exc.on_http_error(exc.GitlabGetError)
     def raw(

@@ -23,6 +23,7 @@ from ...._base_client import (
 )
 from ....types.beta.threads import message_list_params, message_create_params, message_update_params
 from ....types.beta.threads.message import Message
+from ....types.shared_params.metadata import Metadata
 from ....types.beta.threads.message_deleted import MessageDeleted
 from ....types.beta.threads.message_content_part_param import MessageContentPartParam
 
@@ -32,10 +33,21 @@ __all__ = ["Messages", "AsyncMessages"]
 class Messages(SyncAPIResource):
     @cached_property
     def with_raw_response(self) -> MessagesWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return MessagesWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> MessagesWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return MessagesWithStreamingResponse(self)
 
     def create(
@@ -45,7 +57,7 @@ class Messages(SyncAPIResource):
         content: Union[str, Iterable[MessageContentPartParam]],
         role: Literal["user", "assistant"],
         attachments: Optional[Iterable[message_create_params.Attachment]] | NotGiven = NOT_GIVEN,
-        metadata: Optional[object] | NotGiven = NOT_GIVEN,
+        metadata: Optional[Metadata] | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
         # The extra values given here take precedence over values defined on the client or passed to this method.
         extra_headers: Headers | None = None,
@@ -70,9 +82,11 @@ class Messages(SyncAPIResource):
           attachments: A list of files attached to the message, and the tools they should be added to.
 
           metadata: Set of 16 key-value pairs that can be attached to an object. This can be useful
-              for storing additional information about the object in a structured format. Keys
-              can be a maximum of 64 characters long and values can be a maxium of 512
-              characters long.
+              for storing additional information about the object in a structured format, and
+              querying for objects via API or the dashboard.
+
+              Keys are strings with a maximum length of 64 characters. Values are strings with
+              a maximum length of 512 characters.
 
           extra_headers: Send extra headers
 
@@ -144,7 +158,7 @@ class Messages(SyncAPIResource):
         message_id: str,
         *,
         thread_id: str,
-        metadata: Optional[object] | NotGiven = NOT_GIVEN,
+        metadata: Optional[Metadata] | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
         # The extra values given here take precedence over values defined on the client or passed to this method.
         extra_headers: Headers | None = None,
@@ -157,9 +171,11 @@ class Messages(SyncAPIResource):
 
         Args:
           metadata: Set of 16 key-value pairs that can be attached to an object. This can be useful
-              for storing additional information about the object in a structured format. Keys
-              can be a maximum of 64 characters long and values can be a maxium of 512
-              characters long.
+              for storing additional information about the object in a structured format, and
+              querying for objects via API or the dashboard.
+
+              Keys are strings with a maximum length of 64 characters. Values are strings with
+              a maximum length of 512 characters.
 
           extra_headers: Send extra headers
 
@@ -210,8 +226,8 @@ class Messages(SyncAPIResource):
 
           before: A cursor for use in pagination. `before` is an object ID that defines your place
               in the list. For instance, if you make a list request and receive 100 objects,
-              ending with obj_foo, your subsequent call can include before=obj_foo in order to
-              fetch the previous page of the list.
+              starting with obj_foo, your subsequent call can include before=obj_foo in order
+              to fetch the previous page of the list.
 
           limit: A limit on the number of objects to be returned. Limit can range between 1 and
               100, and the default is 20.
@@ -295,10 +311,21 @@ class Messages(SyncAPIResource):
 class AsyncMessages(AsyncAPIResource):
     @cached_property
     def with_raw_response(self) -> AsyncMessagesWithRawResponse:
+        """
+        This property can be used as a prefix for any HTTP method call to return
+        the raw response object instead of the parsed content.
+
+        For more information, see https://www.github.com/openai/openai-python#accessing-raw-response-data-eg-headers
+        """
         return AsyncMessagesWithRawResponse(self)
 
     @cached_property
     def with_streaming_response(self) -> AsyncMessagesWithStreamingResponse:
+        """
+        An alternative to `.with_raw_response` that doesn't eagerly read the response body.
+
+        For more information, see https://www.github.com/openai/openai-python#with_streaming_response
+        """
         return AsyncMessagesWithStreamingResponse(self)
 
     async def create(
@@ -308,7 +335,7 @@ class AsyncMessages(AsyncAPIResource):
         content: Union[str, Iterable[MessageContentPartParam]],
         role: Literal["user", "assistant"],
         attachments: Optional[Iterable[message_create_params.Attachment]] | NotGiven = NOT_GIVEN,
-        metadata: Optional[object] | NotGiven = NOT_GIVEN,
+        metadata: Optional[Metadata] | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
         # The extra values given here take precedence over values defined on the client or passed to this method.
         extra_headers: Headers | None = None,
@@ -333,9 +360,11 @@ class AsyncMessages(AsyncAPIResource):
           attachments: A list of files attached to the message, and the tools they should be added to.
 
           metadata: Set of 16 key-value pairs that can be attached to an object. This can be useful
-              for storing additional information about the object in a structured format. Keys
-              can be a maximum of 64 characters long and values can be a maxium of 512
-              characters long.
+              for storing additional information about the object in a structured format, and
+              querying for objects via API or the dashboard.
+
+              Keys are strings with a maximum length of 64 characters. Values are strings with
+              a maximum length of 512 characters.
 
           extra_headers: Send extra headers
 
@@ -407,7 +436,7 @@ class AsyncMessages(AsyncAPIResource):
         message_id: str,
         *,
         thread_id: str,
-        metadata: Optional[object] | NotGiven = NOT_GIVEN,
+        metadata: Optional[Metadata] | NotGiven = NOT_GIVEN,
         # Use the following arguments if you need to pass additional parameters to the API that aren't available via kwargs.
         # The extra values given here take precedence over values defined on the client or passed to this method.
         extra_headers: Headers | None = None,
@@ -420,9 +449,11 @@ class AsyncMessages(AsyncAPIResource):
 
         Args:
           metadata: Set of 16 key-value pairs that can be attached to an object. This can be useful
-              for storing additional information about the object in a structured format. Keys
-              can be a maximum of 64 characters long and values can be a maxium of 512
-              characters long.
+              for storing additional information about the object in a structured format, and
+              querying for objects via API or the dashboard.
+
+              Keys are strings with a maximum length of 64 characters. Values are strings with
+              a maximum length of 512 characters.
 
           extra_headers: Send extra headers
 
@@ -473,8 +504,8 @@ class AsyncMessages(AsyncAPIResource):
 
           before: A cursor for use in pagination. `before` is an object ID that defines your place
               in the list. For instance, if you make a list request and receive 100 objects,
-              ending with obj_foo, your subsequent call can include before=obj_foo in order to
-              fetch the previous page of the list.
+              starting with obj_foo, your subsequent call can include before=obj_foo in order
+              to fetch the previous page of the list.
 
           limit: A limit on the number of objects to be returned. Limit can range between 1 and
               100, and the default is 20.
