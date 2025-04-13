@@ -8,15 +8,15 @@ logger.setLevel(logging.INFO)
 
 class Prompt(object):
     '''
-    Prompt formulates sentences into instructions and messages format that can be taken by chat completion api.
+    Prompt formulates sentences into instructions and messages format that can be taken by chat completion or assistant api.
     '''
 
     def __init__(self, sentences: List[str]):
-        self._sentences = [s.strip() for s in sentences]
+        self._sentences = [s.rstrip() for s in sentences]
 
     @property
     def instructions(self) -> str:
-        return " ".join(self._sentences).strip()
+        return "\n".join(self._sentences).strip()
 
     @property
     def messages(self) -> List[object]:
