@@ -9,6 +9,10 @@ logger.setLevel(logging.DEBUG)
 slack_app_ids = os.environ['slack_app_ids'].split(",")
 slack_app_tokens = os.environ['slack_app_tokens'].split(",")
 
+sqs = boto3.client('sqs')
+event_sqs_url = os.environ['event_sqs_url']
+input_file_sqs_url = os.environ['input_file_sqs_url']
+
 
 def get_event_key_attrs(slack_event):
     '''
@@ -22,15 +26,16 @@ def get_event_key_attrs(slack_event):
     logger.info(f'Getting Slack key attr')
     team_id = slack_event['team_id']
     event_ts = slack_event['event']['event_ts']
+    event_type = slack_event['event']['type']
     channel = slack_event['event'].get('channel', 'NotFoundInEvent')
     user = slack_event['event'].get('user', 'NotFoundInEvent')
-    ret = (team_id, event_ts, channel, user)
+    ret = (team_id, event_ts, event_type, channel, user)
 
     logger.info(f'{ret}')
     return ret
 
 
-def push_to_sqs(json_slack_event, team_id, event_ts, channel="", user=""):
+def push_to_sqs(sqs_url, sqs_message_body, team_id, event_ts, event_type, channel="", user=""):
     '''
     ToDo: Slack msg limit 40,000 char, SQS limit 256KB
     Hence long slack msg may not fit in
@@ -39,10 +44,9 @@ def push_to_sqs(json_slack_event, team_id, event_ts, channel="", user=""):
         If fail to push, exception is raised by boto3
     '''
     logger.info('Push to SQS')
-    sqs = boto3.client('sqs')
     resp = sqs.send_message(
-        QueueUrl=os.environ['sqs_url'],
-        MessageBody=json_slack_event,
+        QueueUrl=sqs_url,
+        MessageBody=sqs_message_body,
         MessageAttributes={
             'team_id': {
                 'StringValue': team_id,
@@ -50,6 +54,10 @@ def push_to_sqs(json_slack_event, team_id, event_ts, channel="", user=""):
             },
             'event_ts': {
                 'StringValue': event_ts,
+                'DataType': 'String'
+            },
+            'event_type': {
+                'StringValue': event_type,
                 'DataType': 'String'
             },
             'channel': {
@@ -92,7 +100,7 @@ def lambda_handler(event, context):
         }
 
     # Get Slack event key attributes
-    team_id, event_ts, channel, user = get_event_key_attrs(body)
+    team_id, event_ts, event_type, channel, user = get_event_key_attrs(body)
 
     # Send message to SQS
     if body['event'].get('app_id') in slack_app_ids:
@@ -101,8 +109,16 @@ def lambda_handler(event, context):
     elif headers.get('x-slack-retry-reason', None) == "http_timeout":
         # Ignore retry from slack event api due to 3sec timeout
         logger.info('Ignore retry msg due to slack event api 3sec timeout')
+    elif event_type == 'message':
+        # https://api.slack.com/events/message
+        push_to_sqs(event_sqs_url, json_body, team_id,
+                    event_ts, event_type, channel, user)
+    elif event_type == 'file_shared':
+        # https://api.slack.com/events/file_shared
+        push_to_sqs(input_file_sqs_url, json_body, team_id,
+                    event_ts, event_type, channel, user)
     else:
-        push_to_sqs(json_body, team_id, event_ts, channel, user)
+        logger.warning(f'Ignore unrecognized slack event type: {event_type}')
 
     return {
         'statusCode': 200,

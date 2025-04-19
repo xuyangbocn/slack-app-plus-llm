@@ -4,16 +4,10 @@ variable "region" {
   default     = "ap-southeast-1"
 }
 
-variable "msg_receiver_name" {
-  description = "Name suffix for resources that is used as endpoint for slack msg event"
+variable "name" {
+  description = "Give this stack a name, it is used as suffix for resources that are provisioned"
   type        = string
-  default     = "slack_msg_receiver"
-}
-
-variable "msg_handler_name" {
-  description = "Name suffix for resources that is used to handle slack msg"
-  type        = string
-  default     = "slack_msg_handler"
+  default     = "slack_llm"
 }
 
 variable "lambda_msg_handler_timeout" {

@@ -7,15 +7,15 @@ import boto3
 # from msg_handlers.tag_user_handler import handler
 # from msg_handlers.az_openai_handler import handler_via_assistant as handler
 # from msg_handlers.az_openai_handler import handler_via_chat_completion as handler
-from msg_handlers.openai_handler import handler_via_assistant as handler
-# from msg_handlers.openai_handler import handler_via_chat_completion as handler
+# from msg_handlers.openai_handler import handler_via_assistant as handler
+from msg_handlers.openai_handler import handler_via_chat_completion as handler
 # from msg_handlers.aws_reinvent_helper_handler import handler_via_chat_completion as handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 sqs = boto3.client('sqs')
-sqs_url = os.environ['sqs_url']
+sqs_url = os.environ['event_sqs_url']
 
 
 def lambda_handler(event, context):
