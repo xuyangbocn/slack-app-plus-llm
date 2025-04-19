@@ -54,8 +54,10 @@ agent = Agent(
 
 # aws boto3
 ddb_client = boto3.client('dynamodb')
+s3_client = boto3.client('s3')
 ddb_asst_thread_table = os.environ['ddb_asst_thread']
 ddb_chat_completion_table = os.environ['ddb_chat_completion']
+input_file_bucket_name = os.environ['input_file_bucket_name']
 
 
 def get_asst_thread_id(slack_channel_id, slack_thread_ts, slack_user_id=''):
@@ -121,7 +123,12 @@ def fetch_slack_thread(slack_channel_id, slack_thread_ts):
 
         # reverse descending order to chronological ascending order
         messages = [
-            {'role': i['role']['S'], 'content': i['content']['S']}
+            {
+                'role': i['role']['S'],
+                'content': [
+                    {"type": "text", "text": i['content']['S']},
+                ]
+            }
             for i in resp.get('Items')[::-1]
         ]
     except (botocore.exceptions.ClientError, KeyError) as exNotFound:
@@ -175,7 +182,9 @@ def handler_via_assistant(slack_event):
     response = agent.ask_assistant(
         user=msg_details['user'],
         asst_thread_id=asst_thread_id,
-        message=msg_details['text'],
+        message=[
+            {"type": "text", "text": msg_details['text']},
+        ],
     )
 
     # respond on slack thread
@@ -198,7 +207,12 @@ def handler_via_chat_completion(slack_event):
     thread_messages = fetch_slack_thread(
         msg_details['channel_id'], msg_details['thread_ts']
     ) + [
-        {'role': 'user', 'content': msg_details['text']}
+        {
+            'role': 'user',
+            'content': [
+                {"type": "text", "text": msg_details['text']},
+            ]
+        }
     ]
 
     # save latest thread msg
