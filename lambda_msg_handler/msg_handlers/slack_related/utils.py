@@ -20,7 +20,7 @@ def extract_event_details(slack_event):
     https://api.slack.com/events/message.groups
     '''
 
-    text, channel_id, event_ts, thread_ts, user = "", "", "", "", ""
+    text, channel_id, event_ts, thread_ts, user, files = "", "", "", "", "", []
     try:
         msg = slack_event['event']
         text = msg['text']
@@ -28,7 +28,15 @@ def extract_event_details(slack_event):
         event_ts = msg['event_ts']
         thread_ts = msg.get('thread_ts', event_ts)
         user = msg.get('user', 'unknown')
-        files = msg.get('files', [])
+        files = [
+            {
+                "id": f['id'],
+                "name": f['name'],
+                "mimetype": f['mimetype'],
+                "filetype": f['filetype'],
+                "user_team": f['user_team'],
+            } for f in msg.get('files', [])
+        ]
         logger.info(json.dumps(msg, indent=2))
     except KeyError as e:
         logger.warning("Malformed slack event format")

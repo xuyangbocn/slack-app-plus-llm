@@ -1,26 +1,17 @@
 import os
 import logging
-import json
-import time
 
 from openai import OpenAI, AssistantEventHandler
 from minagent import Agent
 
-import boto3
-import botocore
-from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
-
 from msg_handlers.llm_tools import tools
-from msg_handlers.slack_related.utils import extract_event_details, reply
+from msg_handlers.slack_related.SlackLLMHandler import SlackLLMHandler
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Slack client
 slack_oauth_token = os.environ["slack_oauth_token"]
-slack = WebClient(token=slack_oauth_token)
 
 # gpt model
 openai_gpt_model = os.environ.get("openai_gpt_model", "gpt-4o")
@@ -51,192 +42,9 @@ agent = Agent(
 )
 
 # aws boto3
-ddb_client = boto3.client('dynamodb')
-s3_client = boto3.client('s3')
 ddb_asst_thread_table = os.environ['ddb_asst_thread']
 ddb_chat_completion_table = os.environ['ddb_chat_completion']
-input_file_bucket_name = os.environ['input_file_bucket_name']
-
-
-def get_asst_thread_id(slack_channel_id, slack_thread_ts, slack_user_id=''):
-    '''
-    DDB ddb_asst_thread keeps the mapping from slack channel id + thread ts ==> asst_thread_id
-    This function will find the assistant thread id for existing slack thread
-    If not found (i.e. a new slack thread), it will create a assistant thread and insert to DDB
-    '''
-    ddb_search_key = {
-        "slack_channel_id": {"S": slack_channel_id},
-        "slack_thread_ts": {"S": slack_thread_ts},
-    }
-    asst_thread_id = None
-
-    # search thread in DDB
-    try:
-        resp = ddb_client.get_item(
-            TableName=ddb_asst_thread_table,
-            Key=ddb_search_key,
-        )
-        asst_thread_id = resp["Item"]["asst_thread_id"]['S']
-        logger.info(f'DDB record found for thread: {asst_thread_id}')
-    except (botocore.exceptions.ClientError, KeyError) as exNotFound:
-        # if thread not found in DDB
-        thread = openai_client.beta.threads.create()
-        asst_thread_id = thread.id
-        try:
-            ddb_client.update_item(
-                TableName=ddb_asst_thread_table,
-                Key=ddb_search_key,
-                UpdateExpression="SET asst_thread_id=:asst_thread_id, slack_user_id=:slack_user_id",
-                ExpressionAttributeValues={
-                    ":asst_thread_id": {"S": asst_thread_id},
-                    ":slack_user_id": {"S": slack_user_id},
-                }
-            )
-            logger.info(f'DDB record created for thread: {asst_thread_id}')
-        except botocore.exceptions.ClientError as ex:
-            logger.warning(ex)
-            pass
-
-    return asst_thread_id
-
-
-def get_input_file_b64(bucket, team_id, file_id, name, retry=2):
-    content = ""
-    while retry >= 0:
-        try:
-            key = f'base64string/{team_id}/{file_id}/{name}.txt'
-            o = s3_client.get_object(
-                Bucket=bucket,
-                Key=key)
-            content = o['Body'].read().decode('utf-8')
-        except s3_client.exceptions.NoSuchKey as e:
-            # In case file is not uploaded to s3 yet
-            time.sleep(1)
-            logger.warning(f'Wait 1s to get input file b64 for {key}')
-            retry -= 1
-        except Exception as e:
-            logger.error(f'Fail to get input file b64 for {key}: {e}')
-            time.sleep(1)
-            retry -= 1
-        else:
-            break
-    return content
-
-
-def construct_message_content(text, files):
-    '''
-    Construct the message content that is sent to OpenAI API. Including text, and supported images and files
-    Arg:
-        text: string, plain text message
-        files: list of slack file object, from inside the message event
-    Ref:
-        slack file objec: https://api.slack.com/types/file
-        file['mimetype']: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
-        file['filetype']https://api.slack.com/types/file#types
-        https://platform.openai.com/docs/guides/images
-        https://platform.openai.com/docs/guides/pdf-files?api-mode=chat#base64-encoded-files
-    '''
-    content_text = [{
-        "type": "text",
-        "text": text,
-    }]
-
-    try:
-        content_doc = [{
-            "type": "file",
-            "file": {
-                "filename": d['name'],
-                "file_data": f"data:{d['mimetype']};base64,{get_input_file_b64(
-                    input_file_bucket_name, d["user_team"], d["id"], d["name"])}",
-            }}
-            for d in files if d['mimetype'] in ('application/pdf')]
-    except Exception as e:
-        logger.error(f'Fail to extract doc files: {str(e)}')
-        content_doc = []
-
-    try:
-        content_image = [{
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:{i['mimetype']};base64,{get_input_file_b64(
-                    input_file_bucket_name, i["user_team"], i["id"], i["name"])}",
-            }}
-            for i in files if 'image' in i['mimetype']
-        ]
-        logger.info(content_image)
-    except Exception as e:
-        logger.error(f'Fail to extract image: {str(e)}')
-        content_image = []
-
-    return content_text + content_doc + content_image
-
-
-def fetch_slack_thread(slack_channel_id, slack_thread_ts):
-    '''
-    Fetch all messages in the thread stored in DDB
-    '''
-    d = TypeDeserializer()
-    try:
-        resp = ddb_client.query(
-            TableName=ddb_chat_completion_table,
-            Limit=25,
-            ScanIndexForward=False,  # descending order
-            KeyConditionExpression='slack_channel_id_thread_ts = :slack_channel_id_thread_ts',
-            ExpressionAttributeValues={
-                ':slack_channel_id_thread_ts': {
-                    'S': f'{slack_channel_id};{slack_thread_ts}',
-                }
-            }
-        )
-        logger.info(
-            f'DDB records {resp.get("count", "not")} found: {slack_channel_id};{slack_thread_ts}')
-
-        # reverse descending order to chronological ascending order
-        messages = [
-            {
-                'role': i['role']['S'],
-                'content': construct_message_content(
-                    text=i['content']['S'],
-                    files=d.deserialize(i.get('files', {'L': []}))
-                )
-            }
-            for i in resp.get('Items')[::-1]
-        ]
-    except (botocore.exceptions.ClientError, KeyError) as exNotFound:
-        logger.info(f'No existing threads: {exNotFound}')
-        messages = []
-        pass
-
-    return messages
-
-
-def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, content, files, slack_user_id=''):
-    s = TypeSerializer()
-    ddb_search_key = {
-        'slack_channel_id_thread_ts': {'S': f'{slack_channel_id};{slack_thread_ts}'},
-        'slack_event_ts': {'S': slack_event_ts},
-    }
-    try:
-        ddb_client.update_item(
-            TableName=ddb_chat_completion_table,
-            Key=ddb_search_key,
-            UpdateExpression='SET #r=:role, content=:content, files=:files, slack_user_id=:slack_user_id',
-            ExpressionAttributeValues={
-                ':role': {'S': role},
-                ':content': {'S': content},
-                ':files': s.serialize(files),
-                ':slack_user_id': {'S': slack_user_id},
-            },
-            ExpressionAttributeNames={
-                "#r": "role"
-            }
-        )
-        logger.info(
-            f'DDB record created for {role}[{slack_user_id}]: {slack_channel_id};{slack_thread_ts}')
-    except botocore.exceptions.ClientError as ex:
-        logger.error(f'DDB record fail to create: {ex}')
-        pass
-    return
+s3_input_file_bucket = os.environ['s3_input_file_bucket']
 
 
 def handler_via_assistant(slack_event):
@@ -244,28 +52,16 @@ def handler_via_assistant(slack_event):
     Overall slack message processing function
     Simple pass-on to Chatgpt
     '''
-    # Get relevant info from Slack event
-    msg_details = extract_event_details(slack_event)
-
-    # Get exsiting / Create new thread
-    asst_thread_id = get_asst_thread_id(
-        msg_details['channel_id'], msg_details['thread_ts'], msg_details['user'])
-
-    # Call OpenAI Assistant
-    response = agent.ask_assistant(
-        user=msg_details['user'],
-        asst_thread_id=asst_thread_id,
-        message=construct_message_content(
-            msg_details['text'],
-            msg_details['files']
-        ),
+    handler = SlackLLMHandler(
+        agent,
+        s3_input_file_bucket=s3_input_file_bucket,
+        ddb_chat_completion_table=ddb_chat_completion_table,
+        ddb_asst_thread_table=ddb_asst_thread_table,
+        slack_oauth_token=slack_oauth_token,
+        slack_event=slack_event,
+        mode="Assistant",
     )
-
-    # respond on slack thread
-    logger.info(f"Send response to slack thread")
-    reply(response, msg_details['channel_id'],
-          msg_details['event_ts'], slack)
-
+    handler.reply()
     return
 
 
@@ -274,42 +70,14 @@ def handler_via_chat_completion(slack_event):
     Overall slack message processing function
     Re-collect thread history and call Az OpenAI chat completion
     '''
-    # Get relevant info from Slack event
-    msg_details = extract_event_details(slack_event)
-
-    # Re-collect past message in the thread
-    thread_messages = fetch_slack_thread(
-        msg_details['channel_id'], msg_details['thread_ts']
-    ) + [
-        {
-            'role': 'user',
-            'content': construct_message_content(
-                msg_details['text'],
-                msg_details['files']
-            )
-        }
-    ]
-
-    # save latest thread msg
-    save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],
-                     msg_details['event_ts'], 'user', msg_details['text'],
-                     msg_details['files'], msg_details['user'])
-
-    # pass whole message history to chat completion
-    logger.info(f'Call chat completion api')
-    logger.info(f'{"\n".join([str(t)[:70] for t in thread_messages])}')
-    response = agent.chat_completion(
-        user=msg_details['user'],
-        messages=thread_messages,
+    handler = SlackLLMHandler(
+        agent,
+        s3_input_file_bucket=s3_input_file_bucket,
+        ddb_chat_completion_table=ddb_chat_completion_table,
+        ddb_asst_thread_table=ddb_asst_thread_table,
+        slack_oauth_token=slack_oauth_token,
+        slack_event=slack_event,
+        mode="ChatCompletion",
     )
-
-    # respond on slack thread
-    logger.info(f'Send response to slack thread')
-    resp = reply(response, msg_details['channel_id'],
-                 msg_details['thread_ts'], slack)
-
-    # save latest response
-    save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],
-                     resp['ts'], 'assistant', response,
-                     [], msg_details['user'])
+    handler.reply()
     return

@@ -32,7 +32,8 @@ def lambda_handler(event, context):
         try:
             handler(body)
         except Exception as error:
-            logger.error(f"Error at event handling: {str(error)}")
+            logger.error(f"Error at event handling: {str(error)}",
+                         stack_info=True, exc_info=True)
             # TBD another queue to capture failed message
 
         # Delete message from SQS

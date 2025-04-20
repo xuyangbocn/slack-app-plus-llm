@@ -116,7 +116,7 @@ resource "aws_lambda_function" "msg_handler" {
   environment {
     variables = {
       event_sqs_url               = aws_sqs_queue.msg_receiver.url
-      input_file_bucket_name      = aws_s3_bucket.input_file.id
+      s3_input_file_bucket        = aws_s3_bucket.input_file.id
       slack_oauth_token           = local.slack_oauth_token
       ddb_asst_thread             = local.msg_handler.ddb_asst_thread
       ddb_chat_completion         = local.msg_handler.ddb_chat_completion
