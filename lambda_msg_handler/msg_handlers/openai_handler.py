@@ -1,12 +1,14 @@
 import os
 import logging
 import json
+import time
 
 from openai import OpenAI, AssistantEventHandler
 from minagent import Agent
 
 import boto3
 import botocore
+from boto3.dynamodb.types import TypeSerializer, TypeDeserializer
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -98,10 +100,82 @@ def get_asst_thread_id(slack_channel_id, slack_thread_ts, slack_user_id=''):
     return asst_thread_id
 
 
+def get_input_file_b64(bucket, team_id, file_id, name, retry=2):
+    content = ""
+    while retry >= 0:
+        try:
+            key = f'base64string/{team_id}/{file_id}/{name}.txt'
+            o = s3_client.get_object(
+                Bucket=bucket,
+                Key=key)
+            content = o['Body'].read().decode('utf-8')
+        except s3_client.exceptions.NoSuchKey as e:
+            # In case file is not uploaded to s3 yet
+            time.sleep(1)
+            logger.warning(f'Wait 1s to get input file b64 for {key}')
+            retry -= 1
+        except Exception as e:
+            logger.error(f'Fail to get input file b64 for {key}: {e}')
+            time.sleep(1)
+            retry -= 1
+        else:
+            break
+    return content
+
+
+def construct_message_content(text, files):
+    '''
+    Construct the message content that is sent to OpenAI API. Including text, and supported images and files
+    Arg:
+        text: string, plain text message
+        files: list of slack file object, from inside the message event
+    Ref:
+        slack file objec: https://api.slack.com/types/file
+        file['mimetype']: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
+        file['filetype']https://api.slack.com/types/file#types
+        https://platform.openai.com/docs/guides/images
+        https://platform.openai.com/docs/guides/pdf-files?api-mode=chat#base64-encoded-files
+    '''
+    content_text = [{
+        "type": "text",
+        "text": text,
+    }]
+
+    try:
+        content_doc = [{
+            "type": "file",
+            "file": {
+                "filename": d['name'],
+                "file_data": f"data:{d['mimetype']};base64,{get_input_file_b64(
+                    input_file_bucket_name, d["user_team"], d["id"], d["name"])}",
+            }}
+            for d in files if d['mimetype'] in ('application/pdf')]
+    except Exception as e:
+        logger.error(f'Fail to extract doc files: {str(e)}')
+        content_doc = []
+
+    try:
+        content_image = [{
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{i['mimetype']};base64,{get_input_file_b64(
+                    input_file_bucket_name, i["user_team"], i["id"], i["name"])}",
+            }}
+            for i in files if 'image' in i['mimetype']
+        ]
+        logger.info(content_image)
+    except Exception as e:
+        logger.error(f'Fail to extract image: {str(e)}')
+        content_image = []
+
+    return content_text + content_doc + content_image
+
+
 def fetch_slack_thread(slack_channel_id, slack_thread_ts):
     '''
     Fetch all messages in the thread stored in DDB
     '''
+    d = TypeDeserializer()
     try:
         resp = ddb_client.query(
             TableName=ddb_chat_completion_table,
@@ -121,9 +195,10 @@ def fetch_slack_thread(slack_channel_id, slack_thread_ts):
         messages = [
             {
                 'role': i['role']['S'],
-                'content': [
-                    {"type": "text", "text": i['content']['S']},
-                ]
+                'content': construct_message_content(
+                    text=i['content']['S'],
+                    files=d.deserialize(i.get('files', {'L': []}))
+                )
             }
             for i in resp.get('Items')[::-1]
         ]
@@ -135,7 +210,8 @@ def fetch_slack_thread(slack_channel_id, slack_thread_ts):
     return messages
 
 
-def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, content, slack_user_id=''):
+def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, content, files, slack_user_id=''):
+    s = TypeSerializer()
     ddb_search_key = {
         'slack_channel_id_thread_ts': {'S': f'{slack_channel_id};{slack_thread_ts}'},
         'slack_event_ts': {'S': slack_event_ts},
@@ -144,10 +220,11 @@ def save_slack_event(slack_channel_id, slack_thread_ts, slack_event_ts, role, co
         ddb_client.update_item(
             TableName=ddb_chat_completion_table,
             Key=ddb_search_key,
-            UpdateExpression='SET #r=:role, content=:content, slack_user_id=:slack_user_id',
+            UpdateExpression='SET #r=:role, content=:content, files=:files, slack_user_id=:slack_user_id',
             ExpressionAttributeValues={
                 ':role': {'S': role},
                 ':content': {'S': content},
+                ':files': s.serialize(files),
                 ':slack_user_id': {'S': slack_user_id},
             },
             ExpressionAttributeNames={
@@ -178,9 +255,10 @@ def handler_via_assistant(slack_event):
     response = agent.ask_assistant(
         user=msg_details['user'],
         asst_thread_id=asst_thread_id,
-        message=[
-            {"type": "text", "text": msg_details['text']},
-        ],
+        message=construct_message_content(
+            msg_details['text'],
+            msg_details['files']
+        ),
     )
 
     # respond on slack thread
@@ -205,16 +283,17 @@ def handler_via_chat_completion(slack_event):
     ) + [
         {
             'role': 'user',
-            'content': [
-                {"type": "text", "text": msg_details['text']},
-            ]
+            'content': construct_message_content(
+                msg_details['text'],
+                msg_details['files']
+            )
         }
     ]
 
     # save latest thread msg
     save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],
                      msg_details['event_ts'], 'user', msg_details['text'],
-                     msg_details['user'])
+                     msg_details['files'], msg_details['user'])
 
     # pass whole message history to chat completion
     logger.info(f'Call chat completion api')
@@ -232,5 +311,5 @@ def handler_via_chat_completion(slack_event):
     # save latest response
     save_slack_event(msg_details['channel_id'], msg_details['thread_ts'],
                      resp['ts'], 'assistant', response,
-                     msg_details['user'])
+                     [], msg_details['user'])
     return

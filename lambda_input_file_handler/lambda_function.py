@@ -36,9 +36,7 @@ def lambda_handler(event, context):
         # Process Input file
         try:
             team_id = body['team_id']
-            channel_id = body['event']['channel_id']
             file_id = body['event']['file_id']
-            object_name = f'{team_id}/{channel_id}/{file_id}'
 
             # Find slack download link
             # https://api.slack.com/methods/files.info
@@ -62,17 +60,17 @@ def lambda_handler(event, context):
             # Upload base64 string and file bytes to S3
             s3.put_object(
                 Bucket=s3_bucket,
-                Key=f'base64string/{team_id}/{channel_id}/{file_id}/{name}.txt',
+                Key=f'base64string/{team_id}/{file_id}/{name}.txt',
                 Body=base64_string,
                 ContentType='text/plain'
             )
             s3.put_object(
                 Bucket=s3_bucket,
-                Key=f'original/{team_id}/{channel_id}/{file_id}/{name}',
+                Key=f'original/{team_id}/{file_id}/{name}',
                 Body=file_content,
                 ContentType=mimetype
             )
-            logger.info(f"Upload successful: s3://{s3_bucket}/{object_name}")
+            logger.info(f"Upload to s3 successful")
 
         except SlackApiError as e:
             logger.error(f"File id not found {file_id}: {e}")
