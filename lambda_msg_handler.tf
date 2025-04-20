@@ -1,5 +1,5 @@
 # Lambda IAM Role
-data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
+data "aws_iam_policy_document" "msg_handler" {
   statement {
     sid    = "AllowCreateLog"
     effect = "Allow"
@@ -28,10 +28,12 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
   }
 
   statement {
-    sid       = "AllowAccessSqsKms"
-    effect    = "Allow"
-    actions   = ["kms:Decrypt"]
-    resources = [aws_kms_key.msg_receiver.arn]
+    sid     = "AllowAccessSqsKms"
+    effect  = "Allow"
+    actions = ["kms:Decrypt"]
+    resources = [
+      aws_kms_key.slack_llm.arn
+    ]
   }
 
   statement {
@@ -50,6 +52,22 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_handler" {
   }
 
   statement {
+    sid    = "AllowReadWriteFileInS3"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:GetBucketAcl",
+      "s3:ListBucket",
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+    ]
+    resources = [
+      aws_s3_bucket.input_file.arn,
+      "${aws_s3_bucket.input_file.arn}/*",
+    ]
+  }
+
+  statement {
     sid    = "AllowAssumeCrossAccountRole"
     effect = "Allow"
     actions = [
@@ -64,78 +82,10 @@ resource "aws_iam_role" "msg_handler" {
   assume_role_policy = data.aws_iam_policy_document.lmbd_assume_policy.json
 }
 
-resource "aws_iam_role_policy" "lmbd_role_policy_msg_handler" {
+resource "aws_iam_role_policy" "msg_handler" {
   name   = local.msg_handler.iam_role
   role   = aws_iam_role.msg_handler.id
-  policy = data.aws_iam_policy_document.lmbd_role_policy_msg_handler.json
-}
-
-# Lambda layer for slack-sdk
-data "archive_file" "slack_sdk" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda_layer/py_slack_sdk/"
-  output_path = "${path.module}/files/py_slack_sdk.zip"
-}
-
-resource "aws_lambda_layer_version" "slack_sdk" {
-  layer_name               = "py-slack-sdk"
-  description              = "Include slack-sdk"
-  compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
-
-  filename         = data.archive_file.slack_sdk.output_path
-  source_code_hash = data.archive_file.slack_sdk.output_base64sha256
-}
-
-# Lambda layer for openai-sdk
-data "archive_file" "openai_sdk" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda_layer/py_openai_sdk/"
-  output_path = "${path.module}/files/py_openai_sdk.zip"
-}
-
-resource "aws_lambda_layer_version" "openai_sdk" {
-  layer_name               = "py-openai-sdk"
-  description              = "Include openai-sdk"
-  compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
-
-  filename         = data.archive_file.openai_sdk.output_path
-  source_code_hash = data.archive_file.openai_sdk.output_base64sha256
-}
-
-# Lambda layer for gitlab-sdk
-data "archive_file" "gitlab_sdk" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda_layer/py_gitlab_sdk/"
-  output_path = "${path.module}/files/py_gitlab_sdk.zip"
-}
-
-resource "aws_lambda_layer_version" "gitlab_sdk" {
-  layer_name               = "py-gitlab-sdk"
-  description              = "Include gitlab-sdk"
-  compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
-
-  filename         = data.archive_file.gitlab_sdk.output_path
-  source_code_hash = data.archive_file.gitlab_sdk.output_base64sha256
-}
-
-# Lambda layer for jira-sdk
-data "archive_file" "jira_sdk" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda_layer/py_jira_sdk/"
-  output_path = "${path.module}/files/py_jira_sdk.zip"
-}
-
-resource "aws_lambda_layer_version" "jira_sdk" {
-  layer_name               = "py-jira-sdk"
-  description              = "Include jira-sdk"
-  compatible_architectures = ["x86_64", "arm64"]
-  compatible_runtimes      = ["python3.10", "python3.11", "python3.12", "python3.13"]
-
-  filename         = data.archive_file.jira_sdk.output_path
-  source_code_hash = data.archive_file.jira_sdk.output_base64sha256
+  policy = data.aws_iam_policy_document.msg_handler.json
 }
 
 # Lambda source code
@@ -165,7 +115,8 @@ resource "aws_lambda_function" "msg_handler" {
 
   environment {
     variables = {
-      sqs_url                     = aws_sqs_queue.msg_receiver.url
+      event_sqs_url               = aws_sqs_queue.msg_receiver.url
+      s3_input_file_bucket        = aws_s3_bucket.input_file.id
       slack_oauth_token           = local.slack_oauth_token
       ddb_asst_thread             = local.msg_handler.ddb_asst_thread
       ddb_chat_completion         = local.msg_handler.ddb_chat_completion

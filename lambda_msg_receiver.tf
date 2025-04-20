@@ -30,7 +30,7 @@ data "aws_iam_policy_document" "lmbd_role_policy_msg_receiver" {
       "kms:GenerateDataKey",
       "kms:Decrypt"
     ]
-    resources = [aws_kms_key.msg_receiver.arn]
+    resources = [aws_kms_key.slack_llm.arn]
   }
 }
 
@@ -66,9 +66,10 @@ resource "aws_lambda_function" "msg_receiver" {
 
   environment {
     variables = {
-      sqs_url          = aws_sqs_queue.msg_receiver.url
-      slack_app_tokens = join(",", local.slack_app_tokens)
-      slack_app_ids    = join(",", local.slack_app_ids)
+      event_sqs_url      = aws_sqs_queue.msg_receiver.url
+      input_file_sqs_url = aws_sqs_queue.input_file.url
+      slack_app_tokens   = join(",", local.slack_app_tokens)
+      slack_app_ids      = join(",", local.slack_app_ids)
     }
   }
 }

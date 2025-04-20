@@ -15,11 +15,12 @@ styler = SlackStyler()
 def extract_event_details(slack_event):
     '''
     ref: slack event format follow doc below
+    https://api.slack.com/events/message.im
     https://api.slack.com/events/message.channels
     https://api.slack.com/events/message.groups
     '''
 
-    text, channel_id, event_ts, thread_ts, user = "", "", "", "", ""
+    text, channel_id, event_ts, thread_ts, user, files = "", "", "", "", "", []
     try:
         msg = slack_event['event']
         text = msg['text']
@@ -27,11 +28,20 @@ def extract_event_details(slack_event):
         event_ts = msg['event_ts']
         thread_ts = msg.get('thread_ts', event_ts)
         user = msg.get('user', 'unknown')
+        files = [
+            {
+                "id": f['id'],
+                "name": f['name'],
+                "mimetype": f['mimetype'],
+                "filetype": f['filetype'],
+                "user_team": f['user_team'],
+            } for f in msg.get('files', [])
+        ]
         logger.info(json.dumps(msg, indent=2))
     except KeyError as e:
         logger.warning("Malformed slack event format")
 
-    return dict(text=text, channel_id=channel_id, event_ts=event_ts, thread_ts=thread_ts, user=user)
+    return dict(text=text, channel_id=channel_id, event_ts=event_ts, thread_ts=thread_ts, user=user, files=files)
 
 
 def get_user_id(email, slack_client):
