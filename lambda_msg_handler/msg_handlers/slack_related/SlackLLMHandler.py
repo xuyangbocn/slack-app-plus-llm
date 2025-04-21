@@ -384,7 +384,7 @@ class SlackLLMHandler(object):
                                           b64=False, decode=False)
         try:
             file = self.agent.llm_client.files.create(
-                file=content,
+                file=(name, content),
                 purpose="user_data"
             )
         except Exception as e:
