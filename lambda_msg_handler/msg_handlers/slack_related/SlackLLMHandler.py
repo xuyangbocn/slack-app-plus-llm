@@ -68,57 +68,62 @@ class SlackLLMHandler(object):
         # whether via ChatCompletion or Assistant API
         self.mode = mode
 
+        # response from LLM
+        self.response = None
+
     def reply(self):
-        if self.mode == 'ChatCompletion':
-            return self.reply_via_chat_completion()
-        else:
-            return self.reply_via_assistant()
-
-    def reply_via_chat_completion(self):
-        # Re-collect past message in the thread
-        # Append new user message
-        thread_messages = self._ddb_fetch_conversation_state() + [
-            {
-                'role': 'user',
-                'content': self._construct_message_content(self.text, self.files)
-            }
-        ]
-
-        # Save conversation state: user new msg
-        self._ddb_save_conversation_state(
-            self.event_ts, 'user', self.text, self.files)
-
-        # Pass whole message history to chat completion
-        logger.info(f'Call chat completion api')
-        logger.info(f'{"\n".join([str(t)[:100] for t in thread_messages])}')
-        response = self.agent.chat_completion(
-            user=self.user,
-            messages=thread_messages,
-        )
-
-        # Respond on slack thread
-        logger.info(f'Send response to slack thread')
-        resp = self._slack_post_message(response)
-
-        # Save conversation state: response from llm
-        self._ddb_save_conversation_state(
-            resp['ts'], 'assistant', response, [])
+        self.get_llm_response()
+        self.post_reply()
         return
 
-    def reply_via_assistant(self):
-        # Get exsiting / Create new thread
-        asst_thread_id = self._ddb_get_asst_thread_id()
+    def get_llm_response(self):
+        if self.mode == 'ChatCompletion':
+            # Re-collect past message in the thread
+            # Append new user message
+            thread_messages = self._ddb_fetch_conversation_state() + [
+                {
+                    'role': 'user',
+                    'content': self._construct_message_content(self.text, self.files)
+                }
+            ]
 
-        # Call OpenAI Assistant
-        response = self.agent.ask_assistant(
-            user=self.user,
-            asst_thread_id=asst_thread_id,
-            message=self._asst_construct_message_content(),
-        )
+            # Save conversation state: user new msg
+            self._ddb_save_conversation_state(
+                self.event_ts, 'user', self.text, self.files)
 
-        # respond on slack thread
-        logger.info(f"Send response to slack thread")
-        self._slack_post_message(response)
+            # Pass whole message history to chat completion
+            logger.info(f'Call chat completion api')
+            logger.info(
+                f'{"\n".join([str(t)[:300] for t in thread_messages])}')
+            self.response = self.agent.chat_completion(
+                user=self.user,
+                messages=thread_messages,
+            )
+        else:
+            # Get exsiting / Create new thread
+            asst_thread_id = self._ddb_get_asst_thread_id()
+
+            # Call OpenAI Assistant
+            self.response = self.agent.ask_assistant(
+                user=self.user,
+                asst_thread_id=asst_thread_id,
+                message=self._asst_construct_message_content(),
+            )
+
+        return self.response
+
+    def post_reply(self):
+        if not self.response:
+            logger.info(f'Not response from LLM')
+            return
+
+        logger.info(f'Send response to slack thread')
+        resp = self._slack_post_message(self.response)
+
+        if self.mode == 'ChatCompletion':
+            # Save conversation state: response from llm
+            self._ddb_save_conversation_state(
+                resp['ts'], 'assistant', self.response, [])
 
         return
 
@@ -177,9 +182,9 @@ class SlackLLMHandler(object):
 
         return dict(text=text, channel_id=channel_id, event_ts=event_ts, thread_ts=thread_ts, user=user, files=files)
 
-    def _s3_get_input_file(self, team_id, file_id, name, b64: bool = True, decode: bool = True, retry=2, retry_interval=1):
+    def _s3_get_input_file(self, file_id, name, b64: bool = True, decode: bool = True, retry=4, retry_interval=1):
         content = '' if decode else b''
-        key = f'base64string/{team_id}/{file_id}/{name}.txt' if b64 else f'original/{team_id}/{file_id}/{name}'
+        key = f'base64string/{self.user}/{file_id}/{name}.txt' if b64 else f'original/{self.user}/{file_id}/{name}'
 
         while retry >= 0:
             try:
@@ -311,7 +316,7 @@ class SlackLLMHandler(object):
                 "file": {
                     "filename": d['name'],
                     "file_data": f"data:{d['mimetype']};base64,{self._s3_get_input_file(
-                        d["user_team"], d["id"], d["name"], b64=True, decode=True)}",
+                        d["id"], d["name"], b64=True, decode=True)}",
                 }}
                 for d in files if d['mimetype'] in ('application/pdf',)]
         except Exception as e:
@@ -323,7 +328,7 @@ class SlackLLMHandler(object):
                 "type": "image_url",
                 "image_url": {
                     "url": f"data:{i['mimetype']};base64,{self._s3_get_input_file(
-                        i["user_team"], i["id"], i["name"], b64=True, decode=True)}",
+                        i["id"], i["name"], b64=True, decode=True)}",
                 }}
                 for i in files if 'image' in i['mimetype']
             ]
@@ -379,8 +384,8 @@ class SlackLLMHandler(object):
 
         return asst_thread_id
 
-    def _oai_upload_input_file(self, team_id, file_id, name):
-        content = self._s3_get_input_file(team_id, file_id, name,
+    def _oai_upload_input_file(self, file_id, name):
+        content = self._s3_get_input_file(file_id, name,
                                           b64=False, decode=False)
         try:
             file = self.agent.llm_client.files.create(
@@ -427,7 +432,7 @@ class SlackLLMHandler(object):
             content_image = [{
                 "type": "image_file",
                 "image_file": {
-                    "file_id": self._oai_upload_input_file(i["user_team"], i["id"], i["name"]),
+                    "file_id": self._oai_upload_input_file(i["id"], i["name"]),
                 }}
                 for i in self.files if 'image' in i['mimetype']
             ]

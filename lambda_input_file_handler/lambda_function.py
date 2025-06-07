@@ -44,6 +44,7 @@ def lambda_handler(event, context):
             logger.debug(file_info)
             mimetype = file_info['file']['mimetype']
             name = file_info['file']['name']
+            user = file_info['file']['user']
             url = file_info['file']['url_private_download']
             logger.info(f'input file url_private_download: {url}')
 
@@ -60,13 +61,13 @@ def lambda_handler(event, context):
             # Upload base64 string and file bytes to S3
             s3.put_object(
                 Bucket=s3_bucket,
-                Key=f'base64string/{team_id}/{file_id}/{name}.txt',
+                Key=f'base64string/{user}/{file_id}/{name}.txt',
                 Body=base64_string,
                 ContentType='text/plain'
             )
             s3.put_object(
                 Bucket=s3_bucket,
-                Key=f'original/{team_id}/{file_id}/{name}',
+                Key=f'original/{user}/{file_id}/{name}',
                 Body=file_content,
                 ContentType=mimetype
             )
